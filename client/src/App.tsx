@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { featureFlags } from "@/config/featureFlags";
 import AuthPage from "@/pages/auth";
 import OTPPage from "@/pages/otp";
+import OnboardingPage from "@/pages/onboarding";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,7 +22,7 @@ function Router() {
       
       {/* Future routes (feature-flagged) */}
       {featureFlags.screens.otp && <Route path="/otp" component={OTPPage} />}
-      {/* {featureFlags.screens.onboarding && <Route path="/onboarding" component={OnboardingPage} />} */}
+      {featureFlags.screens.onboarding && <Route path="/onboarding" component={OnboardingPage} />}
       {/* {featureFlags.screens.home && <Route path="/home" component={HomePage} />} */}
       {/* {featureFlags.screens.vault && <Route path="/vault" component={VaultPage} />} */}
       

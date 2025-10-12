@@ -20,7 +20,7 @@ export const featureFlags = {
   screens: {
     auth: true,           // ✅ Auth page is live
     otp: true,            // ✅ OTP verification is live
-    onboarding: false,    // 🚧 User onboarding - coming soon
+    onboarding: true,     // ✅ User onboarding is live
     home: false,          // 🚧 Home dashboard - coming soon
     vault: false,         // 🚧 Secure vault - coming soon
   },
