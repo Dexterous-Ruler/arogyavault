@@ -9,6 +9,7 @@ import OTPPage from "@/pages/otp";
 import OnboardingPage from "@/pages/onboarding";
 import HomePage from "@/pages/home";
 import VaultPage from "@/pages/vault";
+import ConsentPage from "@/pages/consent";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       {featureFlags.screens.onboarding && <Route path="/onboarding" component={OnboardingPage} />}
       {featureFlags.screens.home && <Route path="/home" component={HomePage} />}
       {featureFlags.screens.vault && <Route path="/vault" component={VaultPage} />}
+      {featureFlags.screens.consent && <Route path="/consent" component={ConsentPage} />}
       
       {/* Redirect to auth if not enabled */}
       {!featureFlags.screens.auth && <Route path="/" component={NotFound} />}

@@ -23,6 +23,7 @@ export const featureFlags = {
     onboarding: true,     // ✅ User onboarding is live
     home: true,           // ✅ Home dashboard is live
     vault: true,          // ✅ Secure vault is live
+    consent: true,        // ✅ Consent center is live
   },
   
   // Authentication methods
