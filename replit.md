@@ -50,6 +50,7 @@ MediLocker is a responsive health data management web application designed to pr
 -   **Home Dashboard:** Sticky header, quick action cards (Upload, AI Insights, Emergency, Medications), recent documents, AI health insights, nearby clinics/labs, and a fixed bottom navigation.
 -   **Vault Document Timeline:** Secure document vault with sticky header, search functionality, type filters (All/Prescriptions/Lab/Imaging/Bills), document timeline with cards showing title/provider/date/tags, floating action button (FAB) with add menu (Camera/File Upload/QR Scan/DICOM Import), offline sync banner, and empty state.
 -   **Add Document Wizard:** 4-step wizard modal for adding documents with multiple capture methods (Camera/Upload/QR/DICOM), simulated processing with quality indicators, OCR metadata editing with confidence scores, summary review, and success confirmation. Supports bilingual UI and bidirectional navigation.
+-   **Consent Center:** Privacy-focused consent management with three-tab system (Active/Pending/Expired), role-specific consent cards (Doctor/Lab/Family/Insurer), offline sync support, revoke/renew actions, audit log access, and empty states. Accessible via Share button in bottom navigation.
 -   **Security:** End-to-end encryption messaging (UI), privacy-first design, planned ABHA ID integration, and secure vault implementation.
 
 **System Design Choices:**
@@ -97,6 +98,24 @@ MediLocker is a responsive health data management web application designed to pr
 -   Full bilingual support with all translation keys
 -   Comprehensive data-testid attributes for all interactive elements
 -   Automated testing passed (7 test scenarios covering all capture methods, navigation, language toggle, responsive design at mobile/tablet/desktop)
+
+**Screen 7 - Consent Center Implemented:**
+-   Created `ConsentCenter.tsx` component with complete consent management UI
+-   **Header:** Back button (to home), page title, add consent button (Plus icon)
+-   **Three-tab System:** Active, Pending, Expired consents with pill-style selection
+-   **Offline Sync Banner:** Shows pending offline consents count with tap-to-manage interaction
+-   **Consent Cards:** Role-specific colored badges (Doctor/Lab/Family/Insurer), expiry dates, scopes with icons (Docs/Emergency/Time-bound), purpose descriptions
+-   **Action Buttons:** Revoke + Audit Log for active/pending consents, Renew for expired consents
+-   **Revoke Modal:** Confirmation dialog with warning icon, grantee name, Cancel and "Yes, Revoke" buttons
+-   **Empty States:** Shield icon with contextual messages for each tab (Active/Pending/Expired)
+-   **FAB:** Floating action button (bottom-right) to grant new consent
+-   **Mock Consents:** 4 sample consents (Dr. Sharma, Apollo Lab, Family Member, Star Health Insurance) demonstrating all states
+-   Integrated via Share button in home page bottom navigation
+-   Sticky header with smooth scrolling content area
+-   Stagger animations for consent card list (0.05s delay per card)
+-   Full bilingual support (EN/HI) with complete translation keys
+-   Comprehensive data-testid attributes for all interactive elements
+-   Automated testing passed (11 test scenarios covering navigation, tabs, offline banner, revoke flow, renew, audit log, FAB, empty states, back navigation, card details, responsive design at mobile/tablet/desktop)
 
 ## External Dependencies
 
