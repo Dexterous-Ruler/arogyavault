@@ -8,6 +8,7 @@ import AuthPage from "@/pages/auth";
 import OTPPage from "@/pages/otp";
 import OnboardingPage from "@/pages/onboarding";
 import HomePage from "@/pages/home";
+import VaultPage from "@/pages/vault";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,7 +26,7 @@ function Router() {
       {featureFlags.screens.otp && <Route path="/otp" component={OTPPage} />}
       {featureFlags.screens.onboarding && <Route path="/onboarding" component={OnboardingPage} />}
       {featureFlags.screens.home && <Route path="/home" component={HomePage} />}
-      {/* {featureFlags.screens.vault && <Route path="/vault" component={VaultPage} />} */}
+      {featureFlags.screens.vault && <Route path="/vault" component={VaultPage} />}
       
       {/* Redirect to auth if not enabled */}
       {!featureFlags.screens.auth && <Route path="/" component={NotFound} />}

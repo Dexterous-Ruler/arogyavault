@@ -68,7 +68,7 @@ export default function HomePage() {
     console.log(`🔀 Bottom nav tab clicked: ${tabId}`);
     
     if (tabId === 'vault') {
-      alert('Vault feature coming soon!');
+      setLocation('/vault');
     } else if (tabId === 'share') {
       alert('Share feature coming soon!');
     } else if (tabId === 'emergency') {

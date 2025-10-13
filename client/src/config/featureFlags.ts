@@ -22,7 +22,7 @@ export const featureFlags = {
     otp: true,            // ✅ OTP verification is live
     onboarding: true,     // ✅ User onboarding is live
     home: true,           // ✅ Home dashboard is live
-    vault: false,         // 🚧 Secure vault - coming soon
+    vault: true,          // ✅ Secure vault is live
   },
   
   // Authentication methods
