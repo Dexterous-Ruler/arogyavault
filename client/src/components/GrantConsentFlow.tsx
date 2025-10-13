@@ -1,0 +1,682 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  UserCircle, 
+  Stethoscope, 
+  FlaskConical, 
+  Shield, 
+  Users, 
+  User, 
+  FileText, 
+  AlertCircle, 
+  Brain, 
+  Calendar, 
+  ChevronLeft, 
+  Check, 
+  QrCode, 
+  Copy, 
+  MessageSquare, 
+  Clock, 
+  Info 
+} from 'lucide-react';
+
+type RecipientRole = 'doctor' | 'lab' | 'insurance' | 'family' | 'other';
+type ScopeType = 'documents' | 'emergency' | 'insights' | 'timeline';
+type DurationType = '24h' | '7d' | 'custom';
+
+type RecipientOption = {
+  id: RecipientRole;
+  icon: React.ElementType;
+  label: string;
+  labelHi: string;
+};
+
+type ScopeOption = {
+  id: ScopeType;
+  icon: React.ElementType;
+  label: string;
+  labelHi: string;
+  description: string;
+  descriptionHi: string;
+};
+
+type ConsentData = {
+  recipient: {
+    role: RecipientRole | null;
+    name: string;
+  };
+  scopes: ScopeType[];
+  duration: {
+    type: DurationType;
+    customDate?: Date;
+  };
+  purpose: string;
+};
+
+type GrantConsentFlowProps = {
+  language?: 'en' | 'hi';
+  isOffline?: boolean;
+  onComplete?: (data: ConsentData) => void;
+  onCancel?: () => void;
+};
+
+const recipients: RecipientOption[] = [
+  { id: 'doctor', icon: Stethoscope, label: 'Doctor', labelHi: 'डॉक्टर' },
+  { id: 'lab', icon: FlaskConical, label: 'Lab / Diagnostic Center', labelHi: 'लैब / डायग्नोस्टिक सेंटर' },
+  { id: 'insurance', icon: Shield, label: 'Insurance Provider', labelHi: 'बीमा प्रदाता' },
+  { id: 'family', icon: Users, label: 'Family Member / Nominee', labelHi: 'परिवार का सदस्य / नामिती' },
+  { id: 'other', icon: User, label: 'Other', labelHi: 'अन्य' }
+];
+
+const scopes: ScopeOption[] = [
+  {
+    id: 'documents',
+    icon: FileText,
+    label: 'Documents',
+    labelHi: 'दस्तावेज़',
+    description: 'Lab reports, prescriptions, medical records',
+    descriptionHi: 'लैब रिपोर्ट, पर्चे, चिकित्सा रिकॉर्ड'
+  },
+  {
+    id: 'emergency',
+    icon: AlertCircle,
+    label: 'Emergency Card',
+    labelHi: 'आपातकालीन कार्ड',
+    description: 'Blood group, allergies, emergency contacts',
+    descriptionHi: 'रक्त समूह, एलर्जी, आपातकालीन संपर्क'
+  },
+  {
+    id: 'insights',
+    icon: Brain,
+    label: 'AI Insights',
+    labelHi: 'एआई अंतर्दृष्टि',
+    description: 'Health trends and recommendations',
+    descriptionHi: 'स्वास्थ्य रुझान और सिफारिशें'
+  },
+  {
+    id: 'timeline',
+    icon: Calendar,
+    label: 'Entire Health Timeline',
+    labelHi: 'संपूर्ण स्वास्थ्य समयरेखा',
+    description: 'Complete medical history and timeline',
+    descriptionHi: 'पूर्ण चिकित्सा इतिहास और समयरेखा'
+  }
+];
+
+const durations = [
+  { id: '24h' as DurationType, label: '24 Hours', labelHi: '24 घंटे', icon: Clock },
+  { id: '7d' as DurationType, label: '7 Days', labelHi: '7 दिन', icon: Calendar },
+  { id: 'custom' as DurationType, label: 'Custom', labelHi: 'कस्टम', icon: Calendar }
+];
+
+export const GrantConsentFlow = ({
+  language: initialLanguage = 'en',
+  isOffline = false,
+  onComplete,
+  onCancel
+}: GrantConsentFlowProps) => {
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [language, setLanguage] = useState<'en' | 'hi'>(initialLanguage);
+  const [consentData, setConsentData] = useState<ConsentData>({
+    recipient: { role: null, name: '' },
+    scopes: [],
+    duration: { type: '7d' },
+    purpose: ''
+  });
+  const [pin, setPin] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
+
+  const handleRecipientSelect = (role: RecipientRole) => {
+    setConsentData(prev => ({
+      ...prev,
+      recipient: { ...prev.recipient, role }
+    }));
+    setShowNameInput(true);
+  };
+
+  const handleScopeToggle = (scopeId: ScopeType) => {
+    setConsentData(prev => ({
+      ...prev,
+      scopes: prev.scopes.includes(scopeId)
+        ? prev.scopes.filter(s => s !== scopeId)
+        : [...prev.scopes, scopeId]
+    }));
+  };
+
+  const handleNext = () => {
+    if (step < 5) {
+      setStep((step + 1) as typeof step);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep((step - 1) as typeof step);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (pin.length === 4) {
+      setStep(5);
+      onComplete?.(consentData);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const getRecipientLabel = () => {
+    const recipient = recipients.find(r => r.id === consentData.recipient.role);
+    return language === 'hi' ? recipient?.labelHi : recipient?.label;
+  };
+
+  const handleDone = () => {
+    setStep(1);
+    setConsentData({
+      recipient: { role: null, name: '' },
+      scopes: [],
+      duration: { type: '7d' },
+      purpose: ''
+    });
+    setPin('');
+    setShowNameInput(false);
+    onCancel?.();
+  };
+
+  return (
+    <div className="w-full h-screen bg-white flex flex-col max-w-[390px] mx-auto" data-testid="grant-consent-flow">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200" data-testid="header">
+        {step > 1 && step < 5 && (
+          <button 
+            onClick={handleBack} 
+            className="p-2 -ml-2" 
+            aria-label="Back"
+            data-testid="button-back"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-700" />
+          </button>
+        )}
+        {(step === 1 || step === 5) && <div className="w-10" aria-hidden="true" />}
+        
+        <button 
+          onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')} 
+          className="text-sm font-medium text-blue-600" 
+          aria-label="Toggle language"
+          data-testid="button-toggle-language"
+        >
+          {language === 'en' ? 'हिंदी' : 'English'}
+        </button>
+      </div>
+
+      {/* Progress Indicator */}
+      {step < 5 && (
+        <div className="flex items-center justify-center gap-2 py-4" aria-label="progress" data-testid="progress-indicator">
+          {[1, 2, 3, 4].map(s => (
+            <div
+              key={s}
+              className={`h-2 rounded-full transition-all ${
+                s === step ? 'w-8 bg-blue-600' : s < step ? 'w-2 bg-blue-600' : 'w-2 bg-gray-300'
+              }`}
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={4}
+              aria-valuenow={step}
+              aria-label={`Step ${step} of 4`}
+              data-testid={`progress-step-${s}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          {/* Step 1: Recipient Selection */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-6"
+              data-testid="step-1"
+            >
+              <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
+                {language === 'en' ? 'Who do you want to share with?' : 'किसके साथ साझा करना चाहते हैं?'}
+              </h1>
+              
+              <div className="space-y-3 mt-6">
+                {recipients.map(recipient => {
+                  const Icon = recipient.icon;
+                  const isSelected = consentData.recipient.role === recipient.id;
+                  return (
+                    <div key={recipient.id}>
+                      <button
+                        onClick={() => handleRecipientSelect(recipient.id)}
+                        className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                          isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                        aria-pressed={isSelected}
+                        aria-label={language === 'en' ? recipient.label : recipient.labelHi}
+                        data-testid={`button-recipient-${recipient.id}`}
+                      >
+                        <div className={`p-3 rounded-lg ${isSelected ? 'bg-blue-600' : 'bg-gray-100'}`}>
+                          <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-700'}`} />
+                        </div>
+                        <span className="text-lg font-medium text-gray-900">
+                          {language === 'en' ? recipient.label : recipient.labelHi}
+                        </span>
+                      </button>
+                      
+                      {isSelected && showNameInput && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="mt-3 px-4"
+                        >
+                          <label className="sr-only" htmlFor="recipientName">
+                            {language === 'en' ? 'Recipient Name' : 'प्राप्तकर्ता नाम'}
+                          </label>
+                          <input
+                            id="recipientName"
+                            type="text"
+                            placeholder={language === 'en' ? 'Enter name (e.g., Dr. Sharma)' : 'नाम दर्ज करें (जैसे डॉ. शर्मा)'}
+                            value={consentData.recipient.name}
+                            onChange={e =>
+                              setConsentData(prev => ({
+                                ...prev,
+                                recipient: { ...prev.recipient, name: e.target.value }
+                              }))
+                            }
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-600"
+                            data-testid="input-recipient-name"
+                          />
+                        </motion.div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2: Scope Selection */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-6"
+              data-testid="step-2"
+            >
+              <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
+                {language === 'en' ? 'What can they access?' : 'कौन-सी जानकारी साझा करनी है?'}
+              </h1>
+              
+              <div className="space-y-3 mt-6">
+                {scopes.map(scope => {
+                  const Icon = scope.icon;
+                  const isSelected = consentData.scopes.includes(scope.id);
+                  return (
+                    <button
+                      key={scope.id}
+                      onClick={() => handleScopeToggle(scope.id)}
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                        isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                      aria-pressed={isSelected}
+                      aria-label={language === 'en' ? scope.label : scope.labelHi}
+                      data-testid={`button-scope-${scope.id}`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={`p-3 rounded-lg ${isSelected ? 'bg-blue-600' : 'bg-gray-100'}`}>
+                          <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-700'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-lg font-medium text-gray-900">
+                              {language === 'en' ? scope.label : scope.labelHi}
+                            </span>
+                            {isSelected && (
+                              <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center" aria-hidden="true">
+                                <Check className="w-4 h-4 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {language === 'en' ? scope.description : scope.descriptionHi}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {isOffline && (
+                <div 
+                  className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3" 
+                  role="status" 
+                  aria-live="polite"
+                  data-testid="offline-notice"
+                >
+                  <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    {language === 'en'
+                      ? 'If offline, this consent will be queued and synced later.'
+                      : 'यदि ऑफ़लाइन है, तो यह सहमति कतारबद्ध होगी और बाद में सिंक होगी।'}
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Step 3: Duration and Purpose */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-6"
+              data-testid="step-3"
+            >
+              <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
+                {language === 'en' ? 'For how long and why?' : 'कितने समय के लिए और क्यों?'}
+              </h1>
+              
+              <div className="mt-6">
+                <span className="block text-sm font-medium text-gray-700 mb-3">
+                  {language === 'en' ? 'Duration' : 'अवधि'}
+                </span>
+                <div className="space-y-3">
+                  {durations.map(duration => {
+                    const Icon = duration.icon;
+                    const isSelected = consentData.duration.type === duration.id;
+                    return (
+                      <button
+                        key={duration.id}
+                        onClick={() =>
+                          setConsentData(prev => ({
+                            ...prev,
+                            duration: { ...prev.duration, type: duration.id }
+                          }))
+                        }
+                        className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                          isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                        aria-pressed={isSelected}
+                        data-testid={`button-duration-${duration.id}`}
+                      >
+                        <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-600' : 'bg-gray-100'}`}>
+                          <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-700'}`} />
+                        </div>
+                        <span className="text-lg font-medium text-gray-900">
+                          {language === 'en' ? duration.label : duration.labelHi}
+                        </span>
+                        {isSelected && (
+                          <div className="ml-auto w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center" aria-hidden="true">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3" htmlFor="purposeInput">
+                  {language === 'en' ? 'Purpose (Optional)' : 'उद्देश्य (वैकल्पिक)'}
+                </label>
+                <input
+                  id="purposeInput"
+                  type="text"
+                  placeholder={language === 'en' ? 'e.g., Consultation, Insurance Claim' : 'जैसे, परामर्श, बीमा दावा'}
+                  value={consentData.purpose}
+                  onChange={e =>
+                    setConsentData(prev => ({ ...prev, purpose: e.target.value }))
+                  }
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-600"
+                  data-testid="input-purpose"
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 4: Confirmation */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-6"
+              data-testid="step-4"
+            >
+              <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
+                {language === 'en' ? 'Confirm Sharing' : 'सहमति की पुष्टि करें'}
+              </h1>
+              
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl space-y-3" aria-label="Summary Card" data-testid="summary-card">
+                <div className="flex items-start gap-3">
+                  <UserCircle className="w-5 h-5 text-gray-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700">
+                      {language === 'en' ? 'Recipient' : 'प्राप्तकर्ता'}
+                    </p>
+                    <p className="text-base text-gray-900" data-testid="text-summary-recipient">
+                      {consentData.recipient.name || (language === 'en' ? 'Name not provided' : 'नाम दर्ज नहीं')}
+                      {consentData.recipient.role && ` (${getRecipientLabel()})`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-gray-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700">
+                      {language === 'en' ? 'Scope' : 'दायरा'}
+                    </p>
+                    <p className="text-base text-gray-900" data-testid="text-summary-scopes">
+                      {consentData.scopes.length
+                        ? consentData.scopes
+                            .map(s => {
+                              const scope = scopes.find(sc => sc.id === s);
+                              return language === 'en' ? scope?.label : scope?.labelHi;
+                            })
+                            .join(', ')
+                        : language === 'en'
+                        ? 'None selected'
+                        : 'कुछ नहीं चुना'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-gray-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700">
+                      {language === 'en' ? 'Duration' : 'अवधि'}
+                    </p>
+                    <p className="text-base text-gray-900" data-testid="text-summary-duration">
+                      {durations.find(d => d.id === consentData.duration.type)?.[language === 'en' ? 'label' : 'labelHi']}
+                    </p>
+                  </div>
+                </div>
+
+                {consentData.purpose && (
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-gray-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-700">
+                        {language === 'en' ? 'Purpose' : 'उद्देश्य'}
+                      </p>
+                      <p className="text-base text-gray-900" data-testid="text-summary-purpose">{consentData.purpose}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <div className="text-xs text-gray-500">
+                    {language === 'en'
+                      ? 'Offline consents will be queued and synced automatically.'
+                      : 'ऑफ़लाइन सहमतियाँ कतारबद्ध होंगी और स्वचालित रूप से सिंक होंगी।'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3" htmlFor="pin-0">
+                  {language === 'en' ? 'Enter PIN to Confirm' : 'पुष्टि करने के लिए PIN दर्ज करें'}
+                </label>
+                <div className="flex gap-3 justify-center" data-testid="pin-inputs">
+                  {[0, 1, 2, 3].map(i => (
+                    <input
+                      key={i}
+                      id={`pin-${i}`}
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={1}
+                      value={pin[i] || ''}
+                      onChange={e => {
+                        const value = e.target.value;
+                        if (value.length <= 1 && /^\d*$/.test(value)) {
+                          const newPin = pin.split('');
+                          newPin[i] = value;
+                          setPin(newPin.join(''));
+                          if (value && i < 3) {
+                            const nextInput = e.target.parentElement?.children[i + 1] as HTMLInputElement;
+                            nextInput?.focus();
+                          }
+                        }
+                      }}
+                      className="w-14 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                      aria-label={`PIN digit ${i + 1}`}
+                      data-testid={`input-pin-${i}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                className="mt-4 text-sm text-blue-600 font-medium" 
+                aria-label="Use biometric"
+                data-testid="button-biometric"
+              >
+                {language === 'en' ? 'Use Biometric' : 'बायोमेट्रिक का उपयोग करें'}
+              </button>
+            </motion.div>
+          )}
+
+          {/* Step 5: Success */}
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-6 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]"
+              data-testid="step-5"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.2 }}
+                className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6"
+                aria-hidden="true"
+              >
+                <Check className="w-10 h-10 text-green-600" />
+              </motion.div>
+
+              <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center" data-testid="text-success-title">
+                {language === 'en' ? 'Consent Granted Successfully!' : 'सफलतापूर्वक साझा किया गया!'}
+              </h1>
+              
+              <p className="text-gray-600 text-center mb-8" data-testid="text-success-message">
+                {language === 'en'
+                  ? 'Share this QR code or link with the recipient.'
+                  : 'इस QR कोड या लिंक को प्राप्तकर्ता के साथ साझा करें।'}
+              </p>
+
+              <div 
+                className="w-48 h-48 bg-white border-4 border-gray-200 rounded-xl flex items-center justify-center mb-8" 
+                role="img" 
+                aria-label="QR code placeholder"
+                data-testid="qr-code"
+              >
+                <QrCode className="w-32 h-32 text-gray-400" />
+              </div>
+
+              <div className="w-full space-y-3">
+                <button
+                  onClick={() => copyToClipboard('https://medilocker.in/consent/1234')}
+                  className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-center gap-3 hover:border-gray-300 transition-all"
+                  aria-label="Copy shareable link"
+                  data-testid="button-copy-link"
+                >
+                  <Copy className="w-5 h-5 text-gray-700" />
+                  <span className="font-medium text-gray-900">
+                    {language === 'en' ? 'Copy Link' : 'लिंक कॉपी करें'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {}}
+                  className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-center gap-3 hover:border-gray-300 transition-all"
+                  aria-label="Send SMS"
+                  data-testid="button-send-sms"
+                >
+                  <MessageSquare className="w-5 h-5 text-gray-700" />
+                  <span className="font-medium text-gray-900">
+                    {language === 'en' ? 'Send via SMS' : 'SMS के माध्यम से भेजें'}
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom CTA */}
+      {step < 5 && (
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={step === 4 ? handleConfirm : handleNext}
+            disabled={
+              (step === 1 && !consentData.recipient.role) ||
+              (step === 1 && !consentData.recipient.name) ||
+              (step === 2 && consentData.scopes.length === 0) ||
+              (step === 4 && pin.length !== 4)
+            }
+            className="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+            data-testid="button-next"
+          >
+            {step === 4
+              ? language === 'en'
+                ? 'Confirm & Generate'
+                : 'पुष्टि करें और उत्पन्न करें'
+              : language === 'en'
+              ? 'Next'
+              : 'अगला'}
+          </button>
+        </div>
+      )}
+
+      {step === 5 && (
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={handleDone}
+            className="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors"
+            data-testid="button-done"
+          >
+            {language === 'en' ? 'Done' : 'हो गया'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
