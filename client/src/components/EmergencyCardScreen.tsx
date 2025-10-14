@@ -1,5 +1,26 @@
 import { useState } from 'react';
 import { ArrowLeft, Edit, Share2, User, Droplet, AlertCircle, Heart, Pill, Calendar, MapPin, Phone, FileText, FlaskConical, Globe, X, Save } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 type EmergencyCardScreenProps = {
   patientId?: string;
@@ -51,6 +72,17 @@ const formatDate = (dateStr: string) => {
 
 const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
+// Zod schema for patient data validation
+const patientEditSchema = z.object({
+  patientName: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
+  bloodGroup: z.string().min(1, 'Blood group is required'),
+  allergies: z.string().min(1, 'Please specify allergies or write "None"').max(200, 'Allergies must be less than 200 characters'),
+  chronicConditions: z.string().min(1, 'Please specify chronic conditions or write "None"').max(200, 'Chronic conditions must be less than 200 characters'),
+  currentMedications: z.string().min(1, 'Please specify current medications or write "None"').max(200, 'Medications must be less than 200 characters'),
+  age: z.coerce.number().int('Age must be a whole number').gt(0, 'Age must be greater than 0').lte(150, 'Age must be 150 or less'),
+  address: z.string().min(1, 'Address is required').max(300, 'Address must be less than 300 characters'),
+});
+
 export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
   const {
     patientId = '2025-RBH-0213',
@@ -101,18 +133,23 @@ export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState<PatientData>({
-    patientName: patientName,
-    bloodGroup: bloodGroup,
-    allergies: allergies,
-    chronicConditions: chronicConditions,
-    currentMedications: currentMedications,
-    age: age,
-    address: address
+
+  // Form
+  const form = useForm<PatientData>({
+    resolver: zodResolver(patientEditSchema),
+    defaultValues: {
+      patientName,
+      bloodGroup,
+      allergies,
+      chronicConditions,
+      currentMedications,
+      age,
+      address
+    }
   });
 
   const handleEditClick = () => {
-    setEditForm({
+    form.reset({
       patientName,
       bloodGroup,
       allergies,
@@ -124,19 +161,20 @@ export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
     setIsEditModalOpen(true);
   };
 
-  const handleSave = () => {
-    setPatientName(editForm.patientName);
-    setBloodGroup(editForm.bloodGroup);
-    setAllergies(editForm.allergies);
-    setChronicConditions(editForm.chronicConditions);
-    setCurrentMedications(editForm.currentMedications);
-    setAge(editForm.age);
-    setAddress(editForm.address);
-    onSave(editForm);
+  const handleSave = (data: PatientData) => {
+    setPatientName(data.patientName);
+    setBloodGroup(data.bloodGroup);
+    setAllergies(data.allergies);
+    setChronicConditions(data.chronicConditions);
+    setCurrentMedications(data.currentMedications);
+    setAge(data.age);
+    setAddress(data.address);
+    onSave(data);
     setIsEditModalOpen(false);
   };
 
   const handleCancel = () => {
+    form.reset();
     setIsEditModalOpen(false);
   };
 
@@ -420,149 +458,193 @@ export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-4">
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-name">
-                  <User className="w-4 h-4 inline mr-1" />
-                  Name
-                </label>
-                <input
-                  id="edit-name"
-                  type="text"
-                  value={editForm.patientName}
-                  onChange={(e) => setEditForm({ ...editForm, patientName: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter full name"
-                  data-testid="input-edit-name"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSave)} className="p-6 space-y-4">
+                {/* Name */}
+                <FormField
+                  control={form.control}
+                  name="patientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="Enter full name" 
+                          data-testid="input-edit-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              {/* Blood Group */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-blood-group">
-                  <Droplet className="w-4 h-4 inline mr-1" />
-                  Blood Group
-                </label>
-                <select
-                  id="edit-blood-group"
-                  value={editForm.bloodGroup}
-                  onChange={(e) => setEditForm({ ...editForm, bloodGroup: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="select-edit-blood-group"
-                >
-                  {bloodGroupOptions.map((group) => (
-                    <option key={group} value={group}>{group}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Allergies */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-allergies">
-                  <AlertCircle className="w-4 h-4 inline mr-1" />
-                  Allergies
-                </label>
-                <input
-                  id="edit-allergies"
-                  type="text"
-                  value={editForm.allergies}
-                  onChange={(e) => setEditForm({ ...editForm, allergies: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Penicillin, Peanuts"
-                  data-testid="input-edit-allergies"
+                {/* Blood Group */}
+                <FormField
+                  control={form.control}
+                  name="bloodGroup"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Droplet className="w-4 h-4" />
+                        Blood Group
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-blood-group">
+                            <SelectValue placeholder="Select blood group" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {bloodGroupOptions.map((group) => (
+                            <SelectItem key={group} value={group}>{group}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              {/* Chronic Conditions */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-chronic-conditions">
-                  <Heart className="w-4 h-4 inline mr-1" />
-                  Chronic Conditions
-                </label>
-                <input
-                  id="edit-chronic-conditions"
-                  type="text"
-                  value={editForm.chronicConditions}
-                  onChange={(e) => setEditForm({ ...editForm, chronicConditions: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Diabetes Type 2, Hypertension"
-                  data-testid="input-edit-chronic-conditions"
+                {/* Allergies */}
+                <FormField
+                  control={form.control}
+                  name="allergies"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        Allergies
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="e.g., Penicillin, Peanuts" 
+                          data-testid="input-edit-allergies"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              {/* Current Medications */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-medications">
-                  <Pill className="w-4 h-4 inline mr-1" />
-                  Current Medications
-                </label>
-                <input
-                  id="edit-medications"
-                  type="text"
-                  value={editForm.currentMedications}
-                  onChange={(e) => setEditForm({ ...editForm, currentMedications: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Metformin, Aspirin"
-                  data-testid="input-edit-medications"
+                {/* Chronic Conditions */}
+                <FormField
+                  control={form.control}
+                  name="chronicConditions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" />
+                        Chronic Conditions
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="e.g., Diabetes Type 2, Hypertension" 
+                          data-testid="input-edit-chronic-conditions"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              {/* Age */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-age">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Age
-                </label>
-                <input
-                  id="edit-age"
-                  type="number"
-                  value={editForm.age}
-                  onChange={(e) => setEditForm({ ...editForm, age: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter age"
-                  min="0"
-                  max="150"
-                  data-testid="input-edit-age"
+                {/* Current Medications */}
+                <FormField
+                  control={form.control}
+                  name="currentMedications"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Pill className="w-4 h-4" />
+                        Current Medications
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="e.g., Metformin, Aspirin" 
+                          data-testid="input-edit-medications"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              {/* Address */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="edit-address">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Address
-                </label>
-                <textarea
-                  id="edit-address"
-                  value={editForm.address}
-                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter address"
-                  rows={3}
-                  data-testid="input-edit-address"
+                {/* Age */}
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Age
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          placeholder="Enter age" 
+                          min="1"
+                          max="150"
+                          data-testid="input-edit-age"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3 rounded-b-2xl">
-              <button
-                onClick={handleCancel}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                data-testid="button-cancel-edit"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                data-testid="button-save-edit"
-              >
-                <Save className="w-4 h-4" />
-                Save Changes
-              </button>
-            </div>
+                {/* Address */}
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        Address
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Enter address" 
+                          rows={3}
+                          data-testid="input-edit-address"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Modal Footer */}
+                <div className="sticky bottom-0 bg-white pt-4 flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    className="flex-1"
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2"
+                    data-testid="button-save-edit"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </div>
         </div>
       )}
