@@ -13,7 +13,7 @@ type MediLockerAuthPageProps = {
 
 const translations = {
   en: {
-    appName: 'MediLocker',
+    appName: 'Arogya Vault',
     subtitle: 'Your Health. Your Control.',
     signInTitle: 'Sign in to continue',
     signInDesc: 'Use your mobile number or ABHA ID.',
@@ -32,7 +32,7 @@ const translations = {
     loading: 'Sending OTP...'
   },
   hi: {
-    appName: 'मेडीलॉकर',
+    appName: 'आरोग्य वॉल्ट',
     subtitle: 'आपका स्वास्थ्य। आपका नियंत्रण।',
     signInTitle: 'लॉगिन करें',
     signInDesc: 'मोबाइल नंबर या ABHA ID से साइन-इन करें',
