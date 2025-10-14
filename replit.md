@@ -1,8 +1,8 @@
-# MediLocker - Health Data Management Platform
+# Arogya Vault - Health Data Management Platform
 
 ## Overview
 
-MediLocker is a responsive web application for secure, encrypted management of medical records, empowering users with complete ownership and access to their health data. It aims to address privacy concerns and fragmented records, offering a seamless multi-device experience with a focus on UI-first development and accessibility.
+Arogya Vault is a responsive web application for secure, encrypted management of medical records, empowering users with complete ownership and access to their health data. It aims to address privacy concerns and fragmented records, offering a seamless multi-device experience with a focus on UI-first development and accessibility.
 
 ## Recent Changes
 
