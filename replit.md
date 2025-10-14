@@ -4,6 +4,17 @@
 
 MediLocker is a responsive web application for secure, encrypted management of medical records, empowering users with complete ownership and access to their health data. It aims to address privacy concerns and fragmented records, offering a seamless multi-device experience with a focus on UI-first development and accessibility.
 
+## Recent Changes
+
+**October 14, 2025:**
+- **Emergency Card Edit Functionality:** Added comprehensive edit modal for patient information with proper form validation
+  - Implemented using react-hook-form with zodResolver for Zod schema validation
+  - All patient fields are editable: Name, Blood Group, Allergies, Chronic Conditions, Current Medications, Age, Address
+  - Age validation enforces positive integers (1-150) with appropriate error messages
+  - Form validation prevents submission of invalid data (empty fields, invalid age, etc.)
+  - Modal includes Save/Cancel functionality with proper state management
+  - Uses shadcn Form components for consistent UI/UX
+
 ## User Preferences
 
 -   **Communication Style:** I prefer direct and concise communication.
@@ -44,7 +55,7 @@ MediLocker is a responsive web application for secure, encrypted management of m
 -   **Add Document Wizard:** 4-step modal for document addition (capture, processing, OCR metadata editing, review, success). Supports bilingual UI and bidirectional navigation.
 -   **Consent Center:** Privacy-focused consent management with Active/Pending/Expired tabs, role-specific consent cards, revoke/renew actions, audit log.
 -   **Grant Consent Flow:** 5-step wizard for granting consent (recipient, scope, duration/purpose, confirmation with PIN/biometric, success with QR/share options).
--   **Emergency Card Screen:** Comprehensive emergency card with QR code for offline scanning, patient information (name, blood group, allergies, chronic conditions, medications, age, address), recent medical data (last 3 prescriptions, last 2 lab reports), nominee access section with manage button, and Hindi localization banner with Globe icon.
+-   **Emergency Card Screen:** Comprehensive emergency card with QR code for offline scanning, patient information (name, blood group, allergies, chronic conditions, medications, age, address), recent medical data (last 3 prescriptions, last 2 lab reports), nominee access section with manage button, and Hindi localization banner with Globe icon. Features edit functionality with validated form (using react-hook-form + Zod) to update patient details.
 -   **Nominee Management:** Lists nominees with details, provides a 3-step wizard to add new nominees, and allows revoking access.
 -   **Security:** End-to-end encryption (UI), privacy-first design, planned ABHA ID integration, secure vault.
 
