@@ -36,7 +36,7 @@ export default function HomePage() {
 
   const handleEmergencyCardClick = () => {
     console.log('🚨 Emergency Card clicked');
-    alert('Emergency Card feature coming soon!');
+    setLocation('/emergency');
   };
 
   const handleMedicationsClick = () => {
@@ -72,7 +72,7 @@ export default function HomePage() {
     } else if (tabId === 'share') {
       setLocation('/consent');
     } else if (tabId === 'emergency') {
-      alert('Emergency features coming soon!');
+      setLocation('/emergency');
     } else if (tabId === 'profile') {
       alert('Profile settings coming soon!');
     }

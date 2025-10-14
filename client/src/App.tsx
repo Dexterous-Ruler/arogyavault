@@ -10,6 +10,8 @@ import OnboardingPage from "@/pages/onboarding";
 import HomePage from "@/pages/home";
 import VaultPage from "@/pages/vault";
 import ConsentPage from "@/pages/consent";
+import EmergencyPage from "@/pages/emergency";
+import NomineeManagementPage from "@/pages/nominee-management";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -29,6 +31,8 @@ function Router() {
       {featureFlags.screens.home && <Route path="/home" component={HomePage} />}
       {featureFlags.screens.vault && <Route path="/vault" component={VaultPage} />}
       {featureFlags.screens.consent && <Route path="/consent" component={ConsentPage} />}
+      <Route path="/emergency" component={EmergencyPage} />
+      <Route path="/nominee-management" component={NomineeManagementPage} />
       
       {/* Redirect to auth if not enabled */}
       {!featureFlags.screens.auth && <Route path="/" component={NotFound} />}
