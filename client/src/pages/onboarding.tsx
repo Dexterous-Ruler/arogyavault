@@ -13,7 +13,7 @@ export default function OnboardingPage() {
       setLocation('/home');
     } else {
       // Home screen not yet implemented
-      alert('Onboarding complete!\n\nWelcome to MediLocker!\n\n(Home dashboard coming soon)');
+      alert('Onboarding complete!\n\nWelcome to Arogya Vault!\n\n(Home dashboard coming soon)');
     }
   };
 

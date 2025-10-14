@@ -25,7 +25,7 @@ const translations = {
       cta: 'Next'
     },
     slide4: {
-      title: 'Choose How You Use MediLocker',
+      title: 'Choose How You Use Arogya Vault',
       subtitle: 'Select your preferred language and accessibility options.',
       languageLabel: 'Language',
       guidedModeLabel: 'Enable Guided Mode',
@@ -52,7 +52,7 @@ const translations = {
       cta: 'आगे'
     },
     slide4: {
-      title: 'चुनें कि आप MediLocker का उपयोग कैसे करते हैं',
+      title: 'चुनें कि आप Arogya Vault का उपयोग कैसे करते हैं',
       subtitle: 'अपनी पसंदीदा भाषा और सुलभता विकल्प चुनें।',
       languageLabel: 'भाषा',
       guidedModeLabel: 'गाइडेड मोड सक्षम करें',
