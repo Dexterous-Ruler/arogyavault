@@ -1,4 +1,4 @@
-import { ArrowLeft, Edit, Share2, User, Droplet, AlertCircle, Heart, Pill, Calendar, MapPin, Phone, FileText, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Edit, Share2, User, Droplet, AlertCircle, Heart, Pill, Calendar, MapPin, Phone, FileText, FlaskConical, Globe } from 'lucide-react';
 
 type EmergencyCardScreenProps = {
   patientId?: string;
@@ -331,7 +331,10 @@ export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
 
         {/* Hindi Localization Info Banner */}
         <div className="bg-blue-50 rounded-xl border border-blue-200 p-4" data-testid="hindi-info-banner">
-          <p className="text-xs text-blue-800 font-medium mb-2">🌐 Available in Hindi:</p>
+          <p className="text-xs text-blue-800 font-medium mb-2 flex items-center gap-1">
+            <Globe className="w-3 h-3" />
+            Available in Hindi:
+          </p>
           <p className="text-xs text-blue-700">आपातकालीन कार्ड • इस क्यूआर को स्कैन करें • ऑफ़लाइन में भी काम करता है</p>
         </div>
       </div>
