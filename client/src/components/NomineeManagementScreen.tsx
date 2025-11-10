@@ -141,7 +141,7 @@ export const NomineeManagementScreen = ({ onBack }: NomineeManagementScreenProps
   };
 
   return (
-    <div className="w-full h-screen bg-white flex flex-col max-w-[390px] mx-auto overflow-hidden" data-testid="nominee-management-screen">
+    <div className="w-full h-screen bg-white flex flex-col max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto overflow-hidden" data-testid="nominee-management-screen">
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between shadow-sm" data-testid="header">
         <button
           onClick={onBack || (() => window.history.back())}
@@ -304,7 +304,7 @@ export const NomineeManagementScreen = ({ onBack }: NomineeManagementScreenProps
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="bg-white w-full max-w-[390px] mx-auto rounded-t-3xl max-h-[90vh] overflow-y-auto"
+              className="bg-white w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto rounded-t-3xl max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">

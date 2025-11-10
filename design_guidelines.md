@@ -1,4 +1,4 @@
-# MediLocker Design Guidelines
+# Arogya Vault Design Guidelines
 
 ## Design Approach
 **Reference-Based Healthcare Design** - Drawing inspiration from health-tech leaders like Apollo 24/7, Practo, and government health platforms (ABHA), combined with consumer app polish similar to payment apps (PhonePe, Paytm) for trust and accessibility.

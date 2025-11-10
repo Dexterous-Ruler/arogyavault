@@ -1,22 +1,43 @@
-import { MediLockerOtpVerificationScreen } from '@/components/MediLockerOtpVerificationScreen';
+import { ArogyaVaultOtpVerificationScreen } from '@/components/MediLockerOtpVerificationScreen';
 import { useLocation } from 'wouter';
 import { featureFlags } from '@/config/featureFlags';
+import { useVerifyOTP, useResendOTP } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
 
 export default function OTPPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const [phoneNumber, setPhoneNumber] = useState('');
 
-  // TODO: Get actual phone number from auth screen (via location state or context)
-  const phoneNumber = '+91 98765xxx10';
-
-  const handleVerify = (otp: string) => {
-    console.log('✅ OTP verified:', otp);
+  // Extract phone number from URL query params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phone = params.get('phone') || '';
+    setPhoneNumber(phone);
     
-    if (featureFlags.screens.onboarding) {
-      // Navigate to onboarding when implemented
-      setLocation('/onboarding');
-    } else {
-      // Onboarding screen not yet implemented
-      alert(`OTP verified successfully!\n\n(Onboarding screen coming soon)`);
+    if (!phone) {
+      // If no phone number, redirect to auth
+      setLocation('/auth');
+    }
+  }, [location, setLocation]);
+  
+  const verifyOTPMutation = useVerifyOTP();
+  const resendOTPMutation = useResendOTP();
+
+  const handleVerify = async (otp: string) => {
+    if (!phoneNumber) {
+      // If no phone number in URL, go back to auth
+      setLocation('/auth');
+      return;
+    }
+
+    try {
+      await verifyOTPMutation.mutateAsync({ phoneNumber, otp });
+      // Navigation handled in mutation success callback
+    } catch (error: any) {
+      // Error handled by mutation hook (toast notification)
+      console.error('OTP verification failed:', error);
+      // Re-throw so component can show error state
+      throw error;
     }
   };
 
@@ -26,9 +47,19 @@ export default function OTPPage() {
     setLocation('/auth');
   };
 
-  const handleResendOtp = () => {
-    console.log('📲 Resend OTP requested');
-    alert('OTP has been resent to your phone number');
+  const handleResendOtp = async () => {
+    if (!phoneNumber) {
+      setLocation('/auth');
+      return;
+    }
+
+    try {
+      await resendOTPMutation.mutateAsync(phoneNumber);
+      // Success handled by mutation hook (toast notification)
+    } catch (error) {
+      // Error handled by mutation hook (toast notification)
+      console.error('Resend OTP failed:', error);
+    }
   };
 
   const handleGetCall = () => {
@@ -56,9 +87,14 @@ export default function OTPPage() {
     alert('Help & Support\n\n(Help screen coming soon)');
   };
 
+  // Show loading while extracting phone number
+  if (!phoneNumber) {
+    return null;
+  }
+
   return (
-    <MediLockerOtpVerificationScreen
-      phoneNumber={phoneNumber}
+    <ArogyaVaultOtpVerificationScreen
+      phoneNumber={`+91 ${phoneNumber.slice(0, 5)}xxx${phoneNumber.slice(-2)}`}
       onVerify={handleVerify}
       onChangeNumber={handleChangeNumber}
       onResendOtp={handleResendOtp}

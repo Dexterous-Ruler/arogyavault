@@ -3,8 +3,9 @@ import { ArrowLeft, Lock, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OTPInput, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
 type Language = 'en' | 'hi';
-type MediLockerOtpVerificationScreenProps = {
+type ArogyaVaultOtpVerificationScreenProps = {
   phoneNumber?: string;
+  isEmail?: boolean;
   onVerify?: (otp: string) => void;
   onChangeNumber?: () => void;
   onResendOtp?: () => void;
@@ -49,10 +50,11 @@ const translations = {
   }
 };
 
-// @component: MediLockerOtpVerificationScreen
-export const MediLockerOtpVerificationScreen = (props: MediLockerOtpVerificationScreenProps) => {
+// @component: ArogyaVaultOtpVerificationScreen
+export const ArogyaVaultOtpVerificationScreen = (props: ArogyaVaultOtpVerificationScreenProps) => {
   const {
     phoneNumber = '+91 98xxxxxx10',
+    isEmail = false,
     onVerify,
     onChangeNumber,
     onResendOtp,
@@ -86,16 +88,18 @@ export const MediLockerOtpVerificationScreen = (props: MediLockerOtpVerification
     if (otp.length !== 6) return;
     setIsLoading(true);
     setError(false);
-    setTimeout(() => {
-      const isValid = otp === '123456';
-      if (isValid) {
-        onVerify?.(otp);
-      } else {
-        setError(true);
-        setOtp('');
-      }
+    
+    // Call the actual verification handler (which calls the API)
+    // The error handling is done in the parent component
+    try {
+      await onVerify?.(otp);
+    } catch (err) {
+      // If verification fails, show error
+      setError(true);
+      setOtp('');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
   const handleResend = () => {
     if (!canResend) return;
@@ -149,7 +153,7 @@ export const MediLockerOtpVerificationScreen = (props: MediLockerOtpVerification
             </span>
           </div>
           <button onClick={onChangeNumber} className="text-sm font-medium text-[#2F5BFF] mt-1 hover:underline" data-testid="button-change-number">
-            {t.changeNumber}
+                {isEmail ? 'Change Email' : t.changeNumber}
           </button>
         </div>
 

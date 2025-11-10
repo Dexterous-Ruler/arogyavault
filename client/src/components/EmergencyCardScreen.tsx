@@ -86,7 +86,7 @@ const patientEditSchema = z.object({
 export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
   const {
     patientId = '2025-RBH-0213',
-    patientName: initialPatientName = 'Rudraksh Bharti',
+    patientName: initialPatientName = 'Tanishq Aryan',
     bloodGroup: initialBloodGroup = 'B+',
     allergies: initialAllergies = 'Penicillin',
     chronicConditions: initialChronicConditions = 'Diabetes Type 2',
@@ -94,7 +94,7 @@ export const EmergencyCardScreen = (props: EmergencyCardScreenProps) => {
     dateOfBirth = '1990-05-15',
     age: initialAge = 34,
     address: initialAddress = 'Mumbai, Maharashtra',
-    nomineeName = 'Amit Bharti',
+    nomineeName = 'Tanishq Aryan',
     nomineeRelation = 'Brother',
     nomineePhone = '+91 98765 43210',
     nomineeAccessScope = 'Emergency Card / Full Record',

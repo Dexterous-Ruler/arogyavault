@@ -1,4 +1,4 @@
-# MediLocker Auth Screen - Smoke Test Checklist
+# Arogya Vault Auth Screen - Smoke Test Checklist
 
 ## 🎯 Pre-Test Setup
 
@@ -17,7 +17,7 @@
 - [ ] Gradient background: blue-50/30 overlay present
 - [ ] Language toggle (EN/हिं) visible top-right
 - [ ] Guided Mode button visible and clickable
-- [ ] Main heading "MediLocker" centered and bold
+- [ ] Main heading "Arogya Vault" centered and bold
 - [ ] Subtitle "Your Health. Your Control." below heading
 - [ ] White card with rounded corners (rounded-3xl)
 - [ ] Card shadow visible and subtle
@@ -152,7 +152,7 @@
 ## 🌍 Language Tests
 
 ### English (EN)
-- [ ] App name: "MediLocker"
+- [ ] App name: "Arogya Vault"
 - [ ] Subtitle: "Your Health. Your Control."
 - [ ] Sign in title: "Sign in to continue"
 - [ ] Phone placeholder: "Enter mobile number"

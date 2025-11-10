@@ -1,12 +1,22 @@
 import { motion } from 'framer-motion';
 import { Plus, Heart, FileText, BarChart3, Bell, Search, Globe, Mic, ChevronRight, Calendar, Pill, MapPin, WifiOff, Home, FolderOpen, Share2, AlertCircle, User } from 'lucide-react';
 import { useState } from 'react';
+import { LanguageSelector } from '@/i18n/LanguageSelector';
+import { useTranslation } from '@/i18n/useTranslation';
 
-type MediLockerDashboardProps = {
+type ArogyaVaultDashboardProps = {
   language?: 'en' | 'hi';
   guidedMode?: boolean;
   isOffline?: boolean;
   pendingActions?: number;
+  recentDocuments?: Array<{
+    id: string;
+    type: string;
+    date: string;
+    thumbnail?: string;
+  }>;
+  isLoadingDocuments?: boolean;
+  healthInsight?: HealthInsight | null; // Add healthInsight prop
   onLanguageToggle?: () => void;
   onMicClick?: () => void;
   onNotificationsClick?: () => void;
@@ -129,12 +139,14 @@ const translations = {
   }
 };
 
-export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
+export const ArogyaVaultDashboard = (props: ArogyaVaultDashboardProps) => {
   const {
-    language = 'en',
     guidedMode = false,
     isOffline = false,
     pendingActions = 0,
+    recentDocuments: propRecentDocuments,
+    isLoadingDocuments = false,
+    healthInsight: propHealthInsight, // Use prop instead of hardcoded
     onLanguageToggle,
     onMicClick,
     onNotificationsClick,
@@ -150,7 +162,15 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
     onBottomNavClick
   } = props;
   
-  const t = translations[language];
+  // Use centralized translations
+  const { translations: t } = useTranslation();
+  
+  // Use provided documents or empty array
+  const recentDocuments = propRecentDocuments || [];
+  
+  // Use provided health insight or null
+  const healthInsight: HealthInsight | null = propHealthInsight || null;
+  
   const [activeTab, setActiveTab] = useState('home');
   
   const handleTabClick = (tabId: string) => {
@@ -172,85 +192,78 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full max-w-[390px] mx-auto bg-white" data-testid="dashboard-container">
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between" data-testid="header">
-        <div className="flex items-center gap-3">
-          <Heart className="w-8 h-8 text-blue-600" data-testid="icon-app-logo" />
-          <span className="text-xl font-bold text-gray-900" data-testid="text-app-name">{t.appName}</span>
+    <div className="flex flex-col h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white" data-testid="dashboard-container">
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 flex items-center justify-between" data-testid="header">
+        <div className="flex items-center gap-3 md:gap-4">
+          <Heart className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-blue-600" data-testid="icon-app-logo" />
+          <span className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900" data-testid="text-app-name">{t.common.appName}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {guidedMode && (
             <motion.button 
               whileTap={{ scale: 0.95 }} 
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 md:p-2.5 lg:p-3 hover:bg-gray-100 rounded-lg"
               onClick={onMicClick}
               data-testid="button-mic"
             >
-              <Mic className="w-5 h-5 text-gray-700" />
+              <Mic className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-700" />
             </motion.button>
           )}
+          <LanguageSelector variant="compact" className="w-auto" />
           <motion.button 
             whileTap={{ scale: 0.95 }} 
-            className="p-2 hover:bg-gray-100 rounded-lg"
-            onClick={onLanguageToggle}
-            data-testid="button-language-toggle"
-          >
-            <Globe className="w-5 h-5 text-gray-700" />
-          </motion.button>
-          <motion.button 
-            whileTap={{ scale: 0.95 }} 
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 md:p-2.5 lg:p-3 hover:bg-gray-100 rounded-lg"
             onClick={onNotificationsClick}
             data-testid="button-notifications"
           >
-            <Bell className="w-5 h-5 text-gray-700" />
+            <Bell className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-700" />
           </motion.button>
           <motion.button 
             whileTap={{ scale: 0.95 }} 
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 md:p-2.5 lg:p-3 hover:bg-gray-100 rounded-lg"
             onClick={onSearchClick}
             data-testid="button-search"
           >
-            <Search className="w-5 h-5 text-gray-700" />
+            <Search className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-700" />
           </motion.button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-20">
-        <div className="px-6 pt-6 space-y-6">
+      <div className="flex-1 overflow-y-auto pb-20 md:pb-24 lg:pb-28">
+        <div className="px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 space-y-6 md:space-y-8 lg:space-y-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
-            className="space-y-4"
+            className="space-y-4 md:space-y-5 lg:space-y-6"
           >
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-1" data-testid="text-quick-actions-title">
-                {t.quickActions}
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 md:mb-2" data-testid="text-quick-actions-title">
+                {t.dashboard.quickActions}
               </h2>
-              <p className="text-sm text-gray-500" data-testid="text-quick-actions-subtitle">
-                {t.quickActionsSubtitle}
+              <p className="text-sm md:text-base lg:text-lg text-gray-500" data-testid="text-quick-actions-subtitle">
+                {t.dashboard.quickActionsSubtitle}
               </p>
             </div>
             
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory" data-testid="quick-actions-container">
+            <div className="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory" data-testid="quick-actions-container">
               <motion.button 
                 whileHover={{ scale: 1.03 }} 
                 whileTap={{ scale: 0.97 }} 
-                className="flex-shrink-0 w-[280px] bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-3xl p-8 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
+                className="flex-shrink-0 w-[280px] md:w-[320px] lg:w-[360px] bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-3xl p-8 md:p-10 lg:p-12 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
                 onClick={onUploadRecordsClick}
                 data-testid="button-upload-records"
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                    <Plus className="w-7 h-7 text-white" />
+                  <div className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 md:mb-7 lg:mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                    <Plus className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-white" />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {t.uploadRecords}
+                    <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 md:mb-3">
+                      {t.dashboard.uploadRecords}
                     </h3>
-                    <p className="text-sm text-blue-100">
-                      {t.uploadRecordsDesc}
+                    <p className="text-sm md:text-base lg:text-lg text-blue-100">
+                      {t.dashboard.uploadRecordsDesc}
                     </p>
                   </div>
                 </div>
@@ -259,21 +272,21 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
               <motion.button 
                 whileHover={{ scale: 1.03 }} 
                 whileTap={{ scale: 0.97 }} 
-                className="flex-shrink-0 w-[280px] bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 rounded-3xl p-8 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
+                className="flex-shrink-0 w-[280px] md:w-[320px] lg:w-[360px] bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 rounded-3xl p-8 md:p-10 lg:p-12 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
                 onClick={onAiInsightsClick}
                 data-testid="button-ai-insights"
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                    <BarChart3 className="w-7 h-7 text-white" />
+                  <div className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 md:mb-7 lg:mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                    <BarChart3 className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-white" />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {t.aiInsights}
+                    <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 md:mb-3">
+                      {t.dashboard.aiInsights}
                     </h3>
-                    <p className="text-sm text-purple-100">
-                      {t.aiInsightsDesc}
+                    <p className="text-sm md:text-base lg:text-lg text-purple-100">
+                      {t.dashboard.aiInsightsDesc}
                     </p>
                   </div>
                 </div>
@@ -282,21 +295,21 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
               <motion.button 
                 whileHover={{ scale: 1.03 }} 
                 whileTap={{ scale: 0.97 }} 
-                className="flex-shrink-0 w-[280px] bg-gradient-to-br from-red-500 via-red-600 to-red-700 rounded-3xl p-8 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
+                className="flex-shrink-0 w-[280px] md:w-[320px] lg:w-[360px] bg-gradient-to-br from-red-500 via-red-600 to-red-700 rounded-3xl p-8 md:p-10 lg:p-12 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
                 onClick={onEmergencyCardClick}
                 data-testid="button-emergency-card"
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                    <AlertCircle className="w-7 h-7 text-white" />
+                  <div className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 md:mb-7 lg:mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                    <AlertCircle className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-white" />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {t.emergencyCardTitle}
+                    <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 md:mb-3">
+                      {t.dashboard.emergencyCardTitle}
                     </h3>
-                    <p className="text-sm text-red-100">
-                      {t.emergencyCardDesc}
+                    <p className="text-sm md:text-base lg:text-lg text-red-100">
+                      {t.dashboard.emergencyCardDesc}
                     </p>
                   </div>
                 </div>
@@ -305,21 +318,21 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
               <motion.button 
                 whileHover={{ scale: 1.03 }} 
                 whileTap={{ scale: 0.97 }} 
-                className="flex-shrink-0 w-[280px] bg-gradient-to-br from-green-500 via-green-600 to-green-700 rounded-3xl p-8 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
+                className="flex-shrink-0 w-[280px] md:w-[320px] lg:w-[360px] bg-gradient-to-br from-green-500 via-green-600 to-green-700 rounded-3xl p-8 md:p-10 lg:p-12 flex flex-col justify-between shadow-lg hover:shadow-2xl transition-all duration-500 snap-center relative overflow-hidden group"
                 onClick={onMedicationsClick}
                 data-testid="button-medications"
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                    <Pill className="w-7 h-7 text-white" />
+                  <div className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 md:mb-7 lg:mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                    <Pill className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-white" />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {t.medicationsTitle}
+                    <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 md:mb-3">
+                      {t.dashboard.medicationsTitle}
                     </h3>
-                    <p className="text-sm text-green-100">
-                      {t.medicationsDesc}
+                    <p className="text-sm md:text-base lg:text-lg text-green-100">
+                      {t.dashboard.medicationsDesc}
                     </p>
                   </div>
                 </div>
@@ -335,20 +348,24 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900" data-testid="text-recent-documents-title">{t.recentDocuments}</h2>
-                <p className="text-sm text-gray-500" data-testid="text-recent-documents-subtitle">{t.recentDocsSubtitle}</p>
+                <h2 className="text-lg font-bold text-gray-900" data-testid="text-recent-documents-title">{t.dashboard.recentDocuments}</h2>
+                <p className="text-sm text-gray-500" data-testid="text-recent-documents-subtitle">{t.dashboard.recentDocsSubtitle}</p>
               </div>
               <button 
                 className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:underline"
                 onClick={onViewAllDocumentsClick}
                 data-testid="button-view-all-documents"
               >
-                {t.viewAll}
+                {t.dashboard.viewAll}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
-            {recentDocuments.length > 0 ? (
+            {isLoadingDocuments ? (
+              <div className="bg-gray-50 rounded-xl p-6 text-center" data-testid="loading-documents">
+                <p className="text-sm text-gray-500">Loading documents...</p>
+              </div>
+            ) : recentDocuments.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" data-testid="recent-documents-list">
                 {recentDocuments.map((doc, index) => (
                   <motion.div 
@@ -375,7 +392,7 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
             ) : (
               <div className="bg-gray-50 rounded-xl p-6 text-center" data-testid="empty-documents">
                 <FileText className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">{t.noDocuments}</p>
+                <p className="text-sm text-gray-500">{t.dashboard.noDocuments}</p>
               </div>
             )}
           </motion.div>
@@ -387,24 +404,31 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
             className="space-y-4"
           >
             <div>
-              <h2 className="text-lg font-bold text-gray-900" data-testid="text-ai-insights-title">{t.aiHealthInsights}</h2>
-              <p className="text-sm text-gray-500" data-testid="text-ai-insights-subtitle">{t.insightsSubtitle}</p>
+              <h2 className="text-lg font-bold text-gray-900" data-testid="text-ai-insights-title">{t.dashboard.aiHealthInsights}</h2>
+              <p className="text-sm text-gray-500" data-testid="text-ai-insights-subtitle">{t.dashboard.insightsSubtitle}</p>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm" data-testid="card-health-insight">
-              <div className="flex items-start gap-3 mb-3">
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(healthInsight.status)} mt-1`} data-testid="indicator-health-status" />
-                <p className="text-sm text-gray-700 flex-1" data-testid="text-health-insight-message">{healthInsight.message}</p>
+            {healthInsight ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm" data-testid="card-health-insight">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`w-3 h-3 rounded-full ${getStatusColor(healthInsight.status)} mt-1`} data-testid="indicator-health-status" />
+                  <p className="text-sm text-gray-700 flex-1" data-testid="text-health-insight-message">{healthInsight.message}</p>
+                </div>
+                <button 
+                  className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:underline"
+                  onClick={onViewFullReportClick}
+                  data-testid="button-view-full-report"
+                >
+                  {t.dashboard.viewFullReport}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-              <button 
-                className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:underline"
-                onClick={onViewFullReportClick}
-                data-testid="button-view-full-report"
-              >
-                {t.viewFullReport}
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            ) : (
+              <div className="bg-gray-50 rounded-xl p-6 text-center" data-testid="empty-insights">
+                <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">{t.dashboard.noInsights}</p>
+              </div>
+            )}
           </motion.div>
 
           <motion.div 
@@ -413,7 +437,7 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
             transition={{ delay: 0.3 }} 
             className="space-y-4"
           >
-            <h2 className="text-lg font-bold text-gray-900" data-testid="text-nearby-clinics-title">{t.nearbyClinics}</h2>
+            <h2 className="text-lg font-bold text-gray-900" data-testid="text-nearby-clinics-title">{t.dashboard.nearbyClinics}</h2>
             <div className="space-y-3" data-testid="nearby-clinics-list">
               {['City Hospital', 'DiagnoLab', 'HealthCare Clinic'].map((clinic, index) => (
                 <motion.div 
@@ -438,7 +462,7 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
                     onClick={() => onDirectionsClick?.(clinic)}
                     data-testid={`button-directions-${index}`}
                   >
-                    {t.directions}
+                    {t.dashboard.directions}
                   </button>
                 </motion.div>
               ))}
@@ -457,32 +481,32 @@ export const MediLockerDashboard = (props: MediLockerDashboardProps) => {
           <div className="flex items-center gap-2">
             <WifiOff className="w-5 h-5 text-amber-600" />
             <span className="text-sm text-amber-900" data-testid="text-offline-status">
-              {isOffline && `${t.offline} — `}
-              {pendingActions > 0 && `${pendingActions} ${t.actionsPending}`}
+              {isOffline && `${t.common.offline} — `}
+              {pendingActions > 0 && `${pendingActions} ${t.dashboard.actionsPending}`}
             </span>
           </div>
         </motion.div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-around shadow-lg" data-testid="bottom-nav">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 flex items-center justify-around shadow-lg max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto" data-testid="bottom-nav">
         {[
-          { id: 'home', icon: Home, label: t.home },
-          { id: 'vault', icon: FolderOpen, label: t.vault },
-          { id: 'share', icon: Share2, label: t.share },
-          { id: 'emergency', icon: AlertCircle, label: t.emergency },
-          { id: 'profile', icon: User, label: t.profile }
+          { id: 'home', icon: Home, label: t.dashboard.home },
+          { id: 'vault', icon: FolderOpen, label: t.dashboard.vault },
+          { id: 'share', icon: Share2, label: t.common.share },
+          { id: 'emergency', icon: AlertCircle, label: t.dashboard.emergency },
+          { id: 'profile', icon: User, label: t.dashboard.profile }
         ].map(({ id, icon: Icon, label }) => (
           <motion.button 
             key={id} 
             whileTap={{ scale: 0.9 }} 
             onClick={() => handleTabClick(id)} 
-            className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 md:gap-1.5 lg:gap-2 py-2 md:py-2.5 lg:py-3 px-3 md:px-4 lg:px-5 rounded-lg transition-colors ${
               activeTab === id ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-50'
             }`}
             data-testid={`button-nav-${id}`}
           >
-            <Icon className={guidedMode ? 'w-7 h-7' : 'w-6 h-6'} />
-            <span className={guidedMode ? 'text-xs font-medium' : 'text-[10px] font-medium'} data-testid={`text-nav-${id}`}>
+            <Icon className={guidedMode ? 'w-7 h-7 md:w-8 md:h-8 lg:w-9 lg:h-9' : 'w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8'} />
+            <span className={guidedMode ? 'text-xs md:text-sm lg:text-base font-medium' : 'text-[10px] md:text-xs lg:text-sm font-medium'} data-testid={`text-nav-${id}`}>
               {label}
             </span>
           </motion.button>

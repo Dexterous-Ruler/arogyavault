@@ -2,6 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Responsive Container Utility */
+@layer utilities {
+  .container-responsive {
+    @apply w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto;
+  }
+  
+  /* Responsive Typography Scale */
+  .text-responsive-heading {
+    @apply text-2xl md:text-3xl lg:text-4xl xl:text-5xl;
+  }
+  
+  .text-responsive-subheading {
+    @apply text-xl md:text-2xl lg:text-3xl xl:text-4xl;
+  }
+  
+  .text-responsive-body {
+    @apply text-base md:text-lg lg:text-xl;
+  }
+  
+  .text-responsive-small {
+    @apply text-sm md:text-base lg:text-lg;
+  }
+  
+  /* Responsive Spacing */
+  .spacing-responsive {
+    @apply p-4 md:p-6 lg:p-8 xl:p-10;
+  }
+  
+  .spacing-responsive-sm {
+    @apply p-3 md:p-4 lg:p-5 xl:p-6;
+  }
+  
+  .gap-responsive {
+    @apply gap-2 md:gap-3 lg:gap-4 xl:gap-5;
+  }
+  
+  .mb-responsive {
+    @apply mb-4 md:mb-6 lg:mb-8 xl:mb-10;
+  }
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

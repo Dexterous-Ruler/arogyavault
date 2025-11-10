@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Lock, Wifi, WifiOff, Clock, CheckCircle2, Globe, Volume2, ChevronRight } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
+import { LanguageSelector } from '@/i18n/LanguageSelector';
 type Language = 'en' | 'hi';
-type MediLockerOnboardingProps = {
+type ArogyaVaultOnboardingProps = {
   onComplete?: () => void;
 };
 const translations = {
@@ -62,14 +64,15 @@ const translations = {
   }
 };
 
-// @component: MediLockerOnboarding
-export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
+// @component: ArogyaVaultOnboarding
+export const ArogyaVaultOnboarding = (props: ArogyaVaultOnboardingProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [language, setLanguage] = useState<Language>('en');
+  const { language, setLanguage, translations: t } = useTranslation();
   const [guidedMode, setGuidedMode] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
-  const t = translations[language];
+  // Use centralized translations with fallback to local for onboarding-specific keys
+  const onboardingT = translations[language as Language] || translations.en;
   const handleNext = () => {
     if (currentSlide < 3) {
       setCurrentSlide(currentSlide + 1);
@@ -109,18 +112,9 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
   };
 
   // @return
-  return <div className="h-screen w-full bg-white flex flex-col relative overflow-hidden" style={{
-    maxWidth: '390px',
-    margin: '0 auto'
-  }} data-testid="onboarding-container">
-      <div className="absolute top-6 right-6 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-sm border border-gray-200">
-        <button onClick={() => setLanguage('en')} className={`text-sm font-medium px-2 py-1 rounded-full transition-colors ${language === 'en' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'}`} data-testid="button-language-en">
-          EN
-        </button>
-        <span className="text-gray-300">|</span>
-        <button onClick={() => setLanguage('hi')} className={`text-sm font-medium px-2 py-1 rounded-full transition-colors ${language === 'hi' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'}`} data-testid="button-language-hi">
-          हिंदी
-        </button>
+  return <div className="h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white flex flex-col relative overflow-hidden" data-testid="onboarding-container">
+      <div className="absolute top-6 right-6 z-50 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-1">
+        <LanguageSelector variant="compact" className="w-auto min-w-[100px]" />
       </div>
 
       <div className="flex-1 relative" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
@@ -157,7 +151,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.3
           }} className="text-3xl font-bold text-gray-900 text-center mb-4" data-testid="text-slide-1-title">
-                {t.slide1.title}
+                {onboardingT.slide1.title}
               </motion.h1>
 
               <motion.p initial={{
@@ -169,7 +163,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.4
           }} className="text-base text-gray-600 text-center max-w-sm mb-12" data-testid="text-slide-1-subtitle">
-                {t.slide1.subtitle}
+                {onboardingT.slide1.subtitle}
               </motion.p>
 
               <motion.div initial={{
@@ -185,7 +179,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
               minWidth: '200px',
               minHeight: '56px'
             }} data-testid="button-next-slide-1">
-                  {t.slide1.cta}
+                  {onboardingT.slide1.cta}
                   <ChevronRight className="w-5 h-5" />
                 </button>
                 <div className="text-sm text-gray-400 flex items-center gap-1">
@@ -226,7 +220,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.3
           }} className="text-3xl font-bold text-gray-900 text-center mb-4" data-testid="text-slide-2-title">
-                {t.slide2.title}
+                {onboardingT.slide2.title}
               </motion.h1>
 
               <motion.p initial={{
@@ -238,7 +232,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.4
           }} className="text-base text-gray-600 text-center max-w-sm mb-8" data-testid="text-slide-2-subtitle">
-                {t.slide2.subtitle}
+                {onboardingT.slide2.subtitle}
               </motion.p>
 
               <motion.div initial={{
@@ -250,7 +244,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.5
           }} className="flex flex-col gap-4 mb-12 w-full max-w-sm">
-                {t.slide2.bullets.map((bullet, index) => <div key={index} className="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl" data-testid={`bullet-slide-2-${index}`}>
+                {onboardingT.slide2.bullets.map((bullet: string, index: number) => <div key={index} className="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl" data-testid={`bullet-slide-2-${index}`}>
                     <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700 text-base">{bullet}</span>
                   </div>)}
@@ -268,7 +262,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
             minWidth: '200px',
             minHeight: '56px'
           }} data-testid="button-next-slide-2">
-                {t.slide2.cta}
+                {onboardingT.slide2.cta}
                 <ChevronRight className="w-5 h-5" />
               </motion.button>
             </motion.div>}
@@ -308,7 +302,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.3
           }} className="text-3xl font-bold text-gray-900 text-center mb-4" data-testid="text-slide-3-title">
-                {t.slide3.title}
+                {onboardingT.slide3.title}
               </motion.h1>
 
               <motion.p initial={{
@@ -320,7 +314,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.4
           }} className="text-base text-gray-600 text-center max-w-sm mb-8" data-testid="text-slide-3-subtitle">
-                {t.slide3.subtitle}
+                {onboardingT.slide3.subtitle}
               </motion.p>
 
               <motion.div initial={{
@@ -334,15 +328,15 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} className="flex flex-col gap-4 mb-12 w-full max-w-sm">
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl" data-testid="bullet-slide-3-0">
                   <Globe className="w-6 h-6 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700 text-base">{t.slide3.bullets[0]}</span>
+                  <span className="text-gray-700 text-base">{onboardingT.slide3.bullets[0]}</span>
                 </div>
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl" data-testid="bullet-slide-3-1">
                   <Shield className="w-6 h-6 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700 text-base">{t.slide3.bullets[1]}</span>
+                  <span className="text-gray-700 text-base">{onboardingT.slide3.bullets[1]}</span>
                 </div>
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl" data-testid="bullet-slide-3-2">
                   <Clock className="w-6 h-6 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700 text-base">{t.slide3.bullets[2]}</span>
+                  <span className="text-gray-700 text-base">{onboardingT.slide3.bullets[2]}</span>
                 </div>
               </motion.div>
 
@@ -358,7 +352,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
             minWidth: '200px',
             minHeight: '56px'
           }} data-testid="button-next-slide-3">
-                {t.slide3.cta}
+                {onboardingT.slide3.cta}
                 <ChevronRight className="w-5 h-5" />
               </motion.button>
             </motion.div>}
@@ -377,7 +371,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.2
           }} className="text-3xl font-bold text-gray-900 text-center mb-4" data-testid="text-slide-4-title">
-                {t.slide4.title}
+                {onboardingT.slide4.title}
               </motion.h1>
 
               <motion.p initial={{
@@ -389,7 +383,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} transition={{
             delay: 0.3
           }} className="text-base text-gray-600 text-center max-w-sm mb-12" data-testid="text-slide-4-subtitle">
-                {t.slide4.subtitle}
+                {onboardingT.slide4.subtitle}
               </motion.p>
 
               <motion.div initial={{
@@ -403,16 +397,9 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
           }} className="w-full max-w-sm space-y-6 mb-12">
                 <div className="bg-gray-50 rounded-2xl p-6">
                   <label className="text-sm font-semibold text-gray-700 mb-3 block">
-                    {t.slide4.languageLabel}
+                    {t.onboarding?.languageLabel || onboardingT.slide4.languageLabel}
                   </label>
-                  <div className="flex gap-3">
-                    <button onClick={() => setLanguage('en')} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 border border-gray-200'}`} data-testid="button-language-select-en">
-                      English
-                    </button>
-                    <button onClick={() => setLanguage('hi')} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${language === 'hi' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 border border-gray-200'}`} data-testid="button-language-select-hi">
-                      हिंदी
-                    </button>
-                  </div>
+                  <LanguageSelector variant="default" className="w-full" />
                 </div>
 
                 <div className="bg-gray-50 rounded-2xl p-6">
@@ -421,11 +408,11 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
                       <div className="flex items-center gap-2 mb-2">
                         <Volume2 className="w-5 h-5 text-blue-600" />
                         <label className="text-sm font-semibold text-gray-700">
-                          {t.slide4.guidedModeLabel}
+                          {t.onboarding?.guidedModeLabel || onboardingT.slide4.guidedModeLabel}
                         </label>
                       </div>
                       <p className="text-sm text-gray-500">
-                        {t.slide4.guidedModeDesc}
+                        {t.onboarding?.guidedModeDesc || onboardingT.slide4.guidedModeDesc}
                       </p>
                     </div>
                     <button onClick={() => setGuidedMode(!guidedMode)} className={`ml-4 relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${guidedMode ? 'bg-blue-600' : 'bg-gray-200'}`} style={{
@@ -450,7 +437,7 @@ export const MediLockerOnboarding = (props: MediLockerOnboardingProps) => {
             minWidth: '200px',
             minHeight: '56px'
           }} data-testid="button-complete-onboarding">
-                {t.slide4.cta}
+                {t.onboarding?.getStarted || onboardingT.slide4.cta}
                 <ChevronRight className="w-5 h-5" />
               </motion.button>
             </motion.div>}

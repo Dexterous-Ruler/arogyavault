@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Share2, MoreVertical, FileText, Image as ImageIcon, Scan, ChevronDown, ChevronUp, Volume2, ExternalLink, CheckCircle2, AlertCircle, AlertTriangle, Clock, Edit2, Users } from 'lucide-react';
+import { ArrowLeft, Share2, MoreVertical, FileText, Image as ImageIcon, Scan, ChevronDown, ChevronUp, Volume2, ExternalLink, CheckCircle2, AlertCircle, AlertTriangle, Clock, Edit2, Users, Trash2 } from 'lucide-react';
 
 type DocumentType = 'Lab' | 'Prescription' | 'Imaging' | 'Bill';
-type FileType = 'PDF' | 'JPG' | 'PNG' | 'DICOM';
+type FileType = 'PDF' | 'JPG' | 'PNG' | 'DICOM' | 'IMAGE';
 type AIStatus = 'normal' | 'warning' | 'urgent' | 'none';
 type SyncStatus = 'synced' | 'pending';
 
@@ -43,6 +43,7 @@ type DocumentDetailScreenProps = {
   versionHistory?: VersionHistoryItem[];
   accessList?: AccessItem[];
   language?: 'en' | 'hi';
+  fileUrl?: string;
   onBack?: () => void;
   onShare?: () => void;
   onViewFullscreen?: () => void;
@@ -52,6 +53,7 @@ type DocumentDetailScreenProps = {
   onVersionClick?: (version: string) => void;
   onEditMetadata?: () => void;
   onMoreOptions?: () => void;
+  onDelete?: () => void;
 };
 
 const defaultMetadata: DocumentMetadata = {
@@ -218,6 +220,7 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
     versionHistory = defaultVersionHistory,
     accessList = defaultAccessList,
     language = 'en',
+    fileUrl,
     onBack,
     onShare,
     onViewFullscreen,
@@ -226,52 +229,77 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
     onManageAccess,
     onVersionClick,
     onEditMetadata,
-    onMoreOptions
+    onMoreOptions,
+    onDelete
   } = props;
 
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showDeleteMenu, setShowDeleteMenu] = useState(false);
 
   const t = translations[language];
   const FileIcon = getFileIcon(fileType);
   const AIStatusIcon = aiInsight.status !== 'none' ? getAIStatusIcon(aiInsight.status) : null;
 
   return (
-    <div className="h-screen w-full max-w-[390px] mx-auto bg-white flex flex-col overflow-hidden">
+    <div className="h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white flex flex-col overflow-hidden">
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3 md:py-4">
           <button 
             onClick={onBack} 
-            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors" 
+            className="p-2 md:p-3 -ml-2 hover:bg-gray-100 rounded-full transition-colors" 
             aria-label={t.back}
             data-testid="button-back"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
+            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-700" />
           </button>
 
-          <h1 className="flex-1 text-base font-semibold text-gray-900 truncate mx-3 text-center" data-testid="text-document-title">
+          <h1 className="flex-1 text-base md:text-lg lg:text-xl font-semibold text-gray-900 truncate mx-3 text-center" data-testid="text-document-title">
             {metadata.title}
           </h1>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 md:gap-2">
             <button 
               onClick={onShare} 
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors" 
+              className="p-2 md:p-3 hover:bg-gray-100 rounded-full transition-colors" 
               aria-label={t.share}
               data-testid="button-share"
             >
-              <Share2 className="w-5 h-5 text-gray-700" />
+              <Share2 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-700" />
             </button>
             <button 
-              onClick={onMoreOptions}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors" 
+              onClick={() => setShowDeleteMenu(!showDeleteMenu)}
+              className="p-2 md:p-3 hover:bg-gray-100 rounded-full transition-colors relative" 
               aria-label="More options"
               data-testid="button-more-options"
             >
-              <MoreVertical className="w-5 h-5 text-gray-700" />
+              <MoreVertical className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-700" />
+              {showDeleteMenu && (
+                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDeleteMenu(false);
+                      onDelete?.();
+                    }}
+                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Document
+                  </button>
+                </div>
+              )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Click outside to close menu */}
+      {showDeleteMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowDeleteMenu(false)}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto">
         <motion.div 
@@ -279,22 +307,43 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
           animate={{ opacity: 1 }} 
           transition={{ duration: 0.3 }}
         >
-          <div className="relative h-[280px] bg-gray-100 border-b border-gray-200">
-            {(fileType === 'PDF' || fileType === 'JPG' || fileType === 'PNG') && (
+          <div className="relative h-[280px] md:h-[400px] lg:h-[500px] bg-gray-100 border-b border-gray-200">
+            {(fileType === 'JPG' || fileType === 'PNG' || fileType === 'IMAGE') && fileUrl ? (
+              <div className="h-full w-full relative">
+                <img 
+                  src={fileUrl} 
+                  alt={metadata.title}
+                  className="w-full h-full object-contain cursor-pointer"
+                  onClick={onViewFullscreen}
+                  onError={(e) => {
+                    console.error('Failed to load document image');
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <button
+                  onClick={onViewFullscreen}
+                  className="absolute bottom-4 md:bottom-6 lg:bottom-8 right-4 md:right-6 lg:right-8 px-3 md:px-4 lg:px-5 py-2 md:py-2.5 lg:py-3 bg-black/50 hover:bg-black/70 text-white text-sm md:text-base lg:text-lg font-medium rounded-lg flex items-center gap-2 transition-colors"
+                  data-testid="button-view-fullscreen"
+                >
+                  <ExternalLink className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6" />
+                  {t.viewFullscreen}
+                </button>
+              </div>
+            ) : (fileType === 'PDF' || fileType === 'JPG' || fileType === 'PNG') ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
-                  <FileIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <FileIcon className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 text-gray-400 mx-auto mb-4 md:mb-5 lg:mb-6" />
                   <button 
                     onClick={onViewFullscreen} 
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mx-auto"
+                    className="text-sm md:text-base lg:text-lg text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 md:gap-2 mx-auto"
                     data-testid="button-view-fullscreen"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6" />
                     {t.viewFullscreen}
                   </button>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {fileType === 'DICOM' && (
               <div className="h-full flex items-center justify-center">
@@ -302,10 +351,10 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
                   <Scan className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <button 
                     onClick={onViewDICOM} 
-                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                    className="px-4 md:px-5 lg:px-6 py-2 md:py-2.5 lg:py-3 bg-blue-600 text-white text-sm md:text-base lg:text-lg font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
                     data-testid="button-view-dicom"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6" />
                     {t.viewInViewer}
                   </button>
                 </div>
@@ -322,27 +371,27 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
             </div>
           </div>
 
-          <div className="p-4 space-y-4">
+          <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-5 lg:space-y-6">
             <motion.div 
               initial={{ y: 20, opacity: 0 }} 
               animate={{ y: 0, opacity: 1 }} 
               transition={{ delay: 0.1 }} 
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+              className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 lg:p-6 shadow-sm"
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-3 md:mb-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-lg font-semibold text-gray-900" data-testid="text-metadata-title">{metadata.title}</h2>
+                  <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                    <h2 className="text-lg md:text-xl lg:text-2xl font-semibold text-gray-900" data-testid="text-metadata-title">{metadata.title}</h2>
                     <button 
                       onClick={onEditMetadata}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      className="p-1 md:p-1.5 lg:p-2 hover:bg-gray-100 rounded transition-colors"
                       data-testid="button-edit-metadata"
                     >
-                      <Edit2 className="w-4 h-4 text-gray-400" />
+                      <Edit2 className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-400" />
                     </button>
                   </div>
                   <span 
-                    className="inline-block px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded"
+                    className="inline-block px-2 md:px-3 lg:px-4 py-1 md:py-1.5 text-xs md:text-sm lg:text-base font-medium text-blue-700 bg-blue-50 rounded"
                     data-testid="text-document-type"
                   >
                     {metadata.type}
@@ -350,7 +399,7 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 md:space-y-3 text-sm md:text-base lg:text-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">{t.provider}</span>
                   <span className="font-medium text-gray-900" data-testid="text-provider">{metadata.provider}</span>
@@ -397,12 +446,12 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
               initial={{ y: 20, opacity: 0 }} 
               animate={{ y: 0, opacity: 1 }} 
               transition={{ delay: 0.2 }} 
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+              className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 lg:p-6 shadow-sm"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-base font-semibold text-gray-900" data-testid="text-ai-summary-title">{t.aiHealthSummary}</h3>
-                <button className="p-1 hover:bg-gray-100 rounded transition-colors" data-testid="button-tts">
-                  <Volume2 className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <h3 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900" data-testid="text-ai-summary-title">{t.aiHealthSummary}</h3>
+                <button className="p-1 md:p-1.5 lg:p-2 hover:bg-gray-100 rounded transition-colors" data-testid="button-tts">
+                  <Volume2 className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-400" />
                 </button>
               </div>
 
@@ -415,26 +464,26 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
                     </span>
                   </div>
 
-                  <p className="text-sm text-gray-700 leading-relaxed mb-3" data-testid="text-ai-summary">
+                  <p className="text-sm md:text-base lg:text-lg text-gray-700 leading-relaxed mb-3 md:mb-4" data-testid="text-ai-summary">
                     {aiInsight.summary}
                   </p>
 
                   {aiInsight.hasFullAnalysis && (
                     <button 
                       onClick={onViewFullAnalysis} 
-                      className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      className="w-full px-4 md:px-5 lg:px-6 py-2 md:py-2.5 lg:py-3 bg-blue-600 text-white text-sm md:text-base lg:text-lg font-medium rounded-lg hover:bg-blue-700 transition-colors"
                       data-testid="button-view-full-analysis"
                     >
                       {t.viewFullAnalysis}
                     </button>
                   )}
 
-                  <p className="text-xs text-gray-500 mt-3 italic" data-testid="text-disclaimer">
+                  <p className="text-xs md:text-sm lg:text-base text-gray-500 mt-3 md:mt-4 italic" data-testid="text-disclaimer">
                     {t.disclaimer}
                   </p>
                 </>
               ) : (
-                <p className="text-sm text-gray-600" data-testid="text-no-summary">
+                <p className="text-sm md:text-base lg:text-lg text-gray-600" data-testid="text-no-summary">
                   {t.noSummary}
                 </p>
               )}
@@ -448,14 +497,14 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
             >
               <button 
                 onClick={() => setShowVersionHistory(!showVersionHistory)} 
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between p-4 md:p-5 lg:p-6 hover:bg-gray-50 transition-colors"
                 data-testid="button-toggle-version-history"
               >
-                <span className="text-base font-semibold text-gray-900">{t.versionHistory}</span>
+                <span className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">{t.versionHistory}</span>
                 {showVersionHistory ? (
-                  <ChevronUp className="w-5 h-5 text-gray-600" />
+                  <ChevronUp className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-600" />
+                  <ChevronDown className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600" />
                 )}
               </button>
 
@@ -490,11 +539,11 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
               initial={{ y: 20, opacity: 0 }} 
               animate={{ y: 0, opacity: 1 }} 
               transition={{ delay: 0.4 }} 
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-6"
+              className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 lg:p-6 shadow-sm mb-6 md:mb-8"
             >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-gray-900" data-testid="text-access-title">{t.consentAccess}</h3>
-                <Users className="w-5 h-5 text-gray-400" />
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <h3 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900" data-testid="text-access-title">{t.consentAccess}</h3>
+                <Users className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-400" />
               </div>
 
               <div className="space-y-2 mb-3">
@@ -515,7 +564,7 @@ export const DocumentDetailScreen = (props: DocumentDetailScreenProps) => {
 
               <button 
                 onClick={onManageAccess} 
-                className="w-full px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full px-4 md:px-5 lg:px-6 py-2 md:py-2.5 lg:py-3 border border-gray-300 text-gray-700 text-sm md:text-base lg:text-lg font-medium rounded-lg hover:bg-gray-50 transition-colors"
                 data-testid="button-manage-access"
               >
                 {t.manageAccess}

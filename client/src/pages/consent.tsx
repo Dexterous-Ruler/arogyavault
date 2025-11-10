@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { ConsentCenter } from '@/components/ConsentCenter';
 import { GrantConsentFlow } from '@/components/GrantConsentFlow';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ConsentPage() {
   const [, setLocation] = useLocation();
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [showGrantFlow, setShowGrantFlow] = useState(false);
+  const { toast } = useToast();
 
   const handleBack = () => {
     setLocation('/home');
@@ -17,20 +19,21 @@ export default function ConsentPage() {
     setShowGrantFlow(true);
   };
 
-  const handleRevokeConsent = (id: string) => {
-    console.log('Revoke consent:', id);
-  };
-
   const handleViewAudit = (id: string) => {
     console.log('View audit log for consent:', id);
-  };
-
-  const handleManageOfflineQueue = () => {
-    console.log('Manage offline queue clicked');
+    // TODO: Implement audit log viewer modal/page
+    toast({
+      title: 'Audit Log',
+      description: 'Audit log viewer coming soon',
+    });
   };
 
   const handleGrantFlowComplete = (data: any) => {
     console.log('Consent granted:', data);
+    // Flow will handle showing success, we just need to close it after a delay
+    setTimeout(() => {
+      setShowGrantFlow(false);
+    }, 3000);
   };
 
   const handleGrantFlowCancel = () => {
@@ -42,7 +45,6 @@ export default function ConsentPage() {
     return (
       <GrantConsentFlow
         language={language}
-        isOffline={false}
         onComplete={handleGrantFlowComplete}
         onCancel={handleGrantFlowCancel}
       />
@@ -53,9 +55,7 @@ export default function ConsentPage() {
     <ConsentCenter
       onBack={handleBack}
       onGrantConsent={handleGrantConsent}
-      onRevokeConsent={handleRevokeConsent}
       onViewAudit={handleViewAudit}
-      onManageOfflineQueue={handleManageOfflineQueue}
       language={language}
     />
   );

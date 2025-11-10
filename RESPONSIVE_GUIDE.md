@@ -1,8 +1,8 @@
-# MediLocker Responsive Design Guide
+# Arogya Vault Responsive Design Guide
 
 ## 📱 Responsive Breakpoints
 
-The MediLocker Auth page is designed to work seamlessly across all screen types:
+The Arogya Vault Auth page is designed to work seamlessly across all screen types:
 
 ### Mobile First Approach
 - **Base (Mobile)**: 320px - 767px

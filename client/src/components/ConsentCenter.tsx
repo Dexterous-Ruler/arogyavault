@@ -9,78 +9,37 @@ import {
   History, 
   X, 
   RefreshCw, 
-  WifiOff, 
   Shield, 
   Stethoscope, 
   Building2, 
   Users, 
   Briefcase 
 } from 'lucide-react';
+import { useConsents, useRevokeConsent } from '@/hooks/useConsents';
+import type { Consent as APIConsent, ConsentScope, ConsentRole } from '@/lib/api/consents';
+import { AuditLogViewer } from './AuditLogViewer';
 
-type ConsentStatus = 'active' | 'pending' | 'expired';
-type ConsentRole = 'doctor' | 'lab' | 'family' | 'insurer';
-type ConsentScope = 'docs' | 'emergency' | 'timebound';
+// UI types (different from API types)
+type ConsentStatusUI = 'active' | 'pending' | 'expired';
+type ConsentRoleUI = 'doctor' | 'lab' | 'family' | 'insurer';
+type ConsentScopeUI = 'docs' | 'emergency' | 'timebound';
 
 type Consent = {
   id: string;
   granteeName: string;
-  role: ConsentRole;
+  role: ConsentRoleUI;
   expiryDate: string;
-  scopes: ConsentScope[];
+  scopes: ConsentScopeUI[];
   purpose: string;
-  status: ConsentStatus;
-  isOffline?: boolean;
+  status: ConsentStatusUI;
 };
 
 type ConsentCenterProps = {
-  initialConsents?: Consent[];
   onBack?: () => void;
   onGrantConsent?: () => void;
-  onRevokeConsent?: (id: string) => void;
   onViewAudit?: (id: string) => void;
-  onManageOfflineQueue?: () => void;
   language?: 'en' | 'hi';
 };
-
-const mockConsents: Consent[] = [
-  {
-    id: '1',
-    granteeName: 'Dr. Sharma',
-    role: 'doctor',
-    expiryDate: '14 Oct 2025',
-    scopes: ['docs', 'emergency', 'timebound'],
-    purpose: 'Treatment',
-    status: 'active'
-  },
-  {
-    id: '2',
-    granteeName: 'Apollo Lab',
-    role: 'lab',
-    expiryDate: '20 Dec 2024',
-    scopes: ['docs'],
-    purpose: 'Lab Results Sharing',
-    status: 'active'
-  },
-  {
-    id: '3',
-    granteeName: 'Family Member',
-    role: 'family',
-    expiryDate: 'Syncing...',
-    scopes: ['docs', 'emergency'],
-    purpose: 'Emergency Access',
-    status: 'pending',
-    isOffline: true
-  },
-  {
-    id: '4',
-    granteeName: 'Star Health Insurance',
-    role: 'insurer',
-    expiryDate: '01 Jan 2024',
-    scopes: ['docs'],
-    purpose: 'Insurance Claim',
-    status: 'expired'
-  }
-];
 
 const translations = {
   en: {
@@ -141,7 +100,7 @@ const translations = {
   }
 };
 
-const getRoleIcon = (role: ConsentRole) => {
+const getRoleIcon = (role: ConsentRoleUI) => {
   switch (role) {
     case 'doctor':
       return Stethoscope;
@@ -154,7 +113,7 @@ const getRoleIcon = (role: ConsentRole) => {
   }
 };
 
-const getRoleBadgeColor = (role: ConsentRole) => {
+const getRoleBadgeColor = (role: ConsentRoleUI) => {
   switch (role) {
     case 'doctor':
       return 'bg-blue-100 text-blue-700';
@@ -167,7 +126,7 @@ const getRoleBadgeColor = (role: ConsentRole) => {
   }
 };
 
-const getScopeIcon = (scope: ConsentScope) => {
+const getScopeIcon = (scope: ConsentScopeUI) => {
   switch (scope) {
     case 'docs':
       return FileText;
@@ -178,35 +137,84 @@ const getScopeIcon = (scope: ConsentScope) => {
   }
 };
 
+// Map API consent to UI consent format
+const mapAPIConsentToUI = (apiConsent: APIConsent): Consent => {
+  const scopes = JSON.parse(apiConsent.scopes) as ConsentScope[];
+  // Map API scopes to UI scopes
+  const uiScopes: ConsentScopeUI[] = scopes.map(scope => {
+    if (scope === 'documents') return 'docs';
+    if (scope === 'emergency') return 'emergency';
+    if (scope === 'timeline') return 'timebound';
+    if (scope === 'insights') return 'docs'; // Map insights to docs for UI
+    return 'docs'; // fallback
+  });
+
+  // Map API role to UI role
+  const uiRole: ConsentRoleUI = apiConsent.recipientRole === 'insurance' ? 'insurer' : 
+    (apiConsent.recipientRole === 'other' ? 'doctor' : apiConsent.recipientRole as ConsentRoleUI);
+
+  // Format expiry date
+  const expiryDate = apiConsent.expiresAt 
+    ? new Date(apiConsent.expiresAt).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })
+    : 'Unknown';
+
+  // Map status (API has 'revoked', UI uses 'expired')
+  const uiStatus: ConsentStatusUI = apiConsent.status === 'revoked' ? 'expired' : 
+    (apiConsent.status === 'active' ? 'active' : 'expired');
+
+  return {
+    id: apiConsent.id,
+    granteeName: apiConsent.recipientName,
+    role: uiRole,
+    expiryDate,
+    scopes: uiScopes,
+    purpose: apiConsent.purpose,
+    status: uiStatus,
+  };
+};
+
 export const ConsentCenter = ({
-  initialConsents = mockConsents,
   onBack,
   onGrantConsent,
-  onRevokeConsent,
   onViewAudit,
-  onManageOfflineQueue,
   language = 'en'
 }: ConsentCenterProps) => {
-  const [activeTab, setActiveTab] = useState<ConsentStatus>('active');
-  const [consents, setConsents] = useState<Consent[]>(initialConsents);
+  const [activeTab, setActiveTab] = useState<ConsentStatusUI>('active');
   const [revokeModalOpen, setRevokeModalOpen] = useState(false);
   const [selectedConsent, setSelectedConsent] = useState<Consent | null>(null);
+  const [auditLogConsentId, setAuditLogConsentId] = useState<string | null>(null);
+
+  // Fetch consents from API
+  const { data: consentsData, isLoading, error } = useConsents();
+  const revokeConsentMutation = useRevokeConsent();
 
   const t = translations[language];
+
+  // Map API consents to UI format
+  const apiConsents = consentsData?.consents || [];
+  const consents: Consent[] = apiConsents.map(mapAPIConsentToUI);
+
+  // Filter by active tab
   const filteredConsents = consents.filter(c => c.status === activeTab);
-  const pendingCount = consents.filter(c => c.status === 'pending' && c.isOffline).length;
 
   const handleRevoke = (consent: Consent) => {
     setSelectedConsent(consent);
     setRevokeModalOpen(true);
   };
 
-  const confirmRevoke = () => {
+  const confirmRevoke = async () => {
     if (selectedConsent) {
-      setConsents(consents.filter(c => c.id !== selectedConsent.id));
-      onRevokeConsent?.(selectedConsent.id);
-      setRevokeModalOpen(false);
-      setSelectedConsent(null);
+      try {
+        await revokeConsentMutation.mutateAsync(selectedConsent.id);
+        setRevokeModalOpen(false);
+        setSelectedConsent(null);
+      } catch (error) {
+        console.error('Failed to revoke consent:', error);
+      }
     }
   };
 
@@ -214,8 +222,33 @@ export const ConsentCenter = ({
     onGrantConsent?.();
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading consents...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white flex items-center justify-center">
+        <div className="text-center px-6">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-900 font-semibold mb-2">Error loading consents</p>
+          <p className="text-gray-600 text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen w-full max-w-[390px] mx-auto bg-white flex flex-col overflow-hidden" data-testid="consent-center-container">
+    <div className="h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white flex flex-col overflow-hidden" data-testid="consent-center-container">
       {/* Header */}
       <div className="flex-shrink-0 sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between px-4 py-4">
@@ -274,27 +307,6 @@ export const ConsentCenter = ({
         </div>
       </div>
 
-      {/* Offline Banner */}
-      {pendingCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex-shrink-0 bg-amber-50 border-b border-amber-100 px-4 py-3"
-          data-testid="offline-banner"
-        >
-          <button 
-            onClick={onManageOfflineQueue} 
-            className="w-full flex items-center gap-3 text-left"
-            data-testid="button-offline-queue"
-          >
-            <WifiOff className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <span className="text-sm text-amber-800">
-              <strong>{pendingCount}</strong> {t.offlineBanner}
-            </span>
-          </button>
-        </motion.div>
-      )}
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-20">
         <AnimatePresence mode="wait">
@@ -339,6 +351,8 @@ export const ConsentCenter = ({
             >
               {filteredConsents.map((consent, index) => {
                 const RoleIcon = getRoleIcon(consent.role);
+                if (!RoleIcon) return null;
+                
                 return (
                   <motion.div
                     key={consent.id}
@@ -347,7 +361,7 @@ export const ConsentCenter = ({
                     transition={{ delay: index * 0.05 }}
                     className={`bg-white border rounded-xl p-4 shadow-sm ${
                       consent.status === 'expired' ? 'border-gray-200 bg-gray-50' : 'border-gray-200'
-                    } ${consent.isOffline ? 'opacity-70' : ''}`}
+                    }`}
                     data-testid={`consent-card-${consent.id}`}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -363,12 +377,6 @@ export const ConsentCenter = ({
                             <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(consent.role)}`} data-testid={`badge-role-${consent.id}`}>
                               {t[`role${consent.role.charAt(0).toUpperCase() + consent.role.slice(1)}` as keyof typeof t]}
                             </span>
-                            {consent.isOffline && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1" data-testid={`badge-offline-${consent.id}`}>
-                                <WifiOff className="w-3 h-3" />
-                                Offline
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -382,10 +390,12 @@ export const ConsentCenter = ({
                       </div>
                     </div>
 
-                    <div className="mb-3">
+                      <div className="mb-3">
                       <div className="flex flex-wrap gap-2" data-testid={`scopes-${consent.id}`}>
                         {consent.scopes.map(scope => {
                           const ScopeIcon = getScopeIcon(scope);
+                          if (!ScopeIcon) return null;
+                          
                           return (
                             <div 
                               key={scope} 
@@ -423,7 +433,7 @@ export const ConsentCenter = ({
                             {t.revoke}
                           </button>
                           <button 
-                            onClick={() => onViewAudit?.(consent.id)} 
+                            onClick={() => setAuditLogConsentId(consent.id)} 
                             className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
                             data-testid={`button-audit-${consent.id}`}
                           >
@@ -511,6 +521,15 @@ export const ConsentCenter = ({
           </>
         )}
       </AnimatePresence>
+
+      {/* Audit Log Viewer */}
+      {auditLogConsentId && (
+        <AuditLogViewer
+          consentId={auditLogConsentId}
+          onClose={() => setAuditLogConsentId(null)}
+          language={language}
+        />
+      )}
     </div>
   );
 };

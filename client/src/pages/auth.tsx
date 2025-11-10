@@ -1,24 +1,30 @@
-import { MediLockerAuthPage } from '@/components/MediLockerAuthPage';
+import { ArogyaVaultAuthPage } from '@/components/MediLockerAuthPage';
 import { useLocation } from 'wouter';
 import { featureFlags } from '@/config/featureFlags';
+import { useRequestOTP, useRequestEmailOTP } from '@/hooks/useAuth';
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
+  const requestOTPMutation = useRequestOTP();
+  const requestEmailOTPMutation = useRequestEmailOTP();
 
-  const handleContinueWithOTP = (phoneNumber: string) => {
+  const handleContinueWithOTP = async (phoneNumber: string) => {
     if (!featureFlags.auth.phoneOTP) {
       alert('Phone OTP authentication is currently disabled');
       return;
     }
     
-    console.log('📱 Continue with OTP for phone:', phoneNumber);
-    
-    if (featureFlags.screens.otp) {
-      // Navigate to OTP screen when it's implemented
-      setLocation('/otp');
-    } else {
-      // OTP screen not yet implemented
-      alert(`OTP will be sent to ${phoneNumber}\n\n(OTP screen coming soon)`);
+    try {
+      // Call API to request OTP
+      const response = await requestOTPMutation.mutateAsync(phoneNumber);
+      
+      if (response.success) {
+        // Navigate to OTP screen with phone number
+        setLocation(`/otp?phone=${phoneNumber}`);
+      }
+    } catch (error) {
+      // Error handled by mutation hook (toast notification)
+      console.error('OTP request failed:', error);
     }
   };
 
@@ -48,18 +54,28 @@ export default function AuthPage() {
     }
   };
 
-  const handleContinueWithEmail = () => {
+  const handleContinueWithEmail = async (email: string) => {
     if (!featureFlags.auth.email) {
       alert('Email authentication is currently disabled');
       return;
     }
     
-    console.log('📧 Continue with email');
-    alert('Email authentication\n\n(Email screen coming soon)');
+    try {
+      // Call API to request email OTP
+      const response = await requestEmailOTPMutation.mutateAsync(email);
+      
+      if (response.success) {
+        // Navigate to email OTP screen with email
+        setLocation(`/otp-email?email=${encodeURIComponent(email)}`);
+      }
+    } catch (error) {
+      // Error handled by mutation hook (toast notification)
+      console.error('Email OTP request failed:', error);
+    }
   };
 
   return (
-    <MediLockerAuthPage
+    <ArogyaVaultAuthPage
       onContinueWithOTP={featureFlags.auth.phoneOTP ? handleContinueWithOTP : undefined}
       onContinueWithABHA={featureFlags.auth.abhaId ? handleContinueWithABHA : undefined}
       onContinueAsGuest={featureFlags.auth.guest ? handleContinueAsGuest : undefined}

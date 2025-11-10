@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Upload, QrCode, FileArchive, ArrowLeft, Check, X, Clock, ChevronRight, FileText, Calendar, Building2, Tag, Globe, Volume2, CheckCircle2, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 
@@ -26,9 +26,10 @@ type DocumentData = {
   tags: string[];
 };
 
-type MediLockerAddDocumentWizardProps = {
+type ArogyaVaultAddDocumentWizardProps = {
   language?: Language;
-  onComplete?: (data: DocumentData) => void;
+  initialMethod?: SourceMethod;
+  onComplete?: (data: DocumentData & { file?: File }) => void;
   onCancel?: () => void;
 };
 
@@ -170,12 +171,15 @@ const mockOCRFields: OCRField[] = [
   }
 ];
 
-export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardProps) => {
-  const { language: initialLanguage = 'en', onComplete, onCancel } = props;
+export const ArogyaVaultAddDocumentWizard = (props: ArogyaVaultAddDocumentWizardProps) => {
+  const { language: initialLanguage = 'en', initialMethod, onComplete, onCancel } = props;
   
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [currentStep, setCurrentStep] = useState<number>(initialMethod ? 2 : 1);
   const [language, setLanguage] = useState<Language>(initialLanguage);
-  const [sourceMethod, setSourceMethod] = useState<SourceMethod>(null);
+  const [sourceMethod, setSourceMethod] = useState<SourceMethod>(initialMethod || null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [captureQuality, setCaptureQuality] = useState<'good' | 'glare' | 'detecting'>('detecting');
   const [documentData, setDocumentData] = useState<DocumentData>({
@@ -190,6 +194,8 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
   });
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const t = translations[language];
 
@@ -229,32 +235,287 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
     }
   };
 
-  const handleContinueFromCapture = () => {
-    let fileName = 'captured_document.jpg';
-    let fileType = 'JPG';
+  // Handle file upload
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFile(file);
     
-    if (sourceMethod === 'camera') {
-      fileName = 'captured_document.jpg';
-      fileType = 'JPG';
-    } else if (sourceMethod === 'upload') {
-      fileName = 'uploaded_document.pdf';
-      fileType = 'PDF';
-    } else if (sourceMethod === 'qr') {
-      fileName = 'abha_imported_record.pdf';
-      fileType = 'PDF';
-    } else if (sourceMethod === 'dicom') {
-      fileName = 'medical_imaging.zip';
-      fileType = 'DICOM ZIP';
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCapturedImage(e.target?.result as string);
+        setDocumentData(prev => ({
+          ...prev,
+          fileName: file.name,
+          fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+          fileType: file.type.includes('pdf') ? 'PDF' : 
+                   file.type.includes('image') ? 'IMAGE' :
+                   file.type.includes('word') ? 'DOCX' : 'OTHER',
+          preview: e.target?.result as string,
+          file: file, // Store file for upload
+        }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For non-images, just set metadata
+      setDocumentData(prev => ({
+        ...prev,
+        fileName: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        fileType: file.type.includes('pdf') ? 'PDF' : 
+                 file.type.includes('zip') ? 'ZIP' :
+                 file.type.includes('word') ? 'DOCX' : 'OTHER',
+        file: file, // Store file for upload
+      }));
     }
     
-    setDocumentData(prev => ({
-      ...prev,
-      fileName,
-      fileSize: '2.4 MB',
-      fileType,
-      preview: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI1MCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk0YTNiOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkRvY3VtZW50IFByZXZpZXc8L3RleHQ+PC9zdmc+'
-    }));
-    setCurrentStep(3);
+    setIsCapturing(false);
+    setCaptureQuality('good');
+  };
+
+  // Handle camera capture
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } // Use back camera
+      });
+      setCameraStream(stream);
+      setIsCapturing(true);
+      setCaptureQuality('detecting');
+      
+      // Simulate quality detection
+      setTimeout(() => {
+        setCaptureQuality('good');
+      }, 2000);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!cameraStream) return;
+    
+    const video = document.querySelector('video');
+    if (!video) return;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0);
+      const imageDataUrl = canvas.toDataURL('image/jpeg');
+      setCapturedImage(imageDataUrl);
+      
+      // Convert to blob/file
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `captured_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          setUploadedFile(file);
+          setDocumentData(prev => ({
+            ...prev,
+            fileName: file.name,
+            fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            fileType: 'JPG',
+            preview: imageDataUrl,
+            file: file,
+          }));
+        }
+      }, 'image/jpeg', 0.9);
+    }
+    
+    // Stop camera
+    cameraStream.getTracks().forEach(track => track.stop());
+    setCameraStream(null);
+    setIsCapturing(false);
+    setCaptureQuality('good');
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+  };
+
+  // Handle QR code scan
+  const handleQRScan = () => {
+    // For now, simulate QR scan - in production, use a QR scanner library
+    setIsCapturing(true);
+    setTimeout(() => {
+      // Simulate importing from ABHA
+      const mockFile = new File(['ABHA Record'], 'abha_record.pdf', { type: 'application/pdf' });
+      setUploadedFile(mockFile);
+      setDocumentData(prev => ({
+        ...prev,
+        fileName: 'abha_imported_record.pdf',
+        fileSize: '1.2 MB',
+        fileType: 'PDF',
+        file: mockFile,
+      }));
+      setIsCapturing(false);
+      setCaptureQuality('good');
+    }, 2000);
+  };
+
+  // Handle DICOM ZIP import
+  const handleDicomImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.zip')) {
+      alert('Please select a ZIP file for DICOM import');
+      return;
+    }
+
+    setUploadedFile(file);
+    setIsCapturing(true);
+    
+    // Simulate processing
+    setTimeout(() => {
+      setDocumentData(prev => ({
+        ...prev,
+        fileName: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        fileType: 'ZIP',
+        file: file,
+      }));
+      setIsCapturing(false);
+      setCaptureQuality('good');
+    }, 2000);
+  };
+
+  const handleContinueFromCapture = async () => {
+    if (!uploadedFile && !capturedImage) {
+      alert('Please capture or upload a file first');
+      return;
+    }
+
+    // Get the file to analyze
+    let fileToAnalyze: File | null = null;
+    
+    if (uploadedFile) {
+      fileToAnalyze = uploadedFile;
+    } else if (capturedImage) {
+      // Convert captured image (base64) to File
+      try {
+        const response = await fetch(capturedImage);
+        const blob = await response.blob();
+        fileToAnalyze = new File([blob], 'captured-image.jpg', { type: 'image/jpeg' });
+      } catch (error) {
+        console.error('Failed to convert captured image to file:', error);
+        alert('Failed to process captured image');
+        return;
+      }
+    }
+
+    if (!fileToAnalyze) {
+      alert('No file to analyze');
+      return;
+    }
+
+    // Show loading state
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+
+    try {
+      // Call analyze API
+      const formData = new FormData();
+      formData.append('file', fileToAnalyze);
+
+      const response = await fetch('/api/documents/analyze', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      // Read response as text first to handle both JSON and non-JSON responses
+      const responseText = await response.text();
+      console.log('[Wizard] Response status:', response.status, response.statusText);
+      console.log('[Wizard] Response text (first 500 chars):', responseText.substring(0, 500));
+      
+      let data: any;
+      
+      // Try to parse as JSON
+      try {
+        data = JSON.parse(responseText);
+        console.log('[Wizard] Parsed JSON data:', data);
+      } catch (parseError) {
+        console.error('[Wizard] Failed to parse JSON response:', parseError);
+        console.error('[Wizard] Full response text:', responseText);
+        
+        // If it's a 401, user might not be logged in
+        if (response.status === 401) {
+          setAnalysisError('Please log in to analyze documents.');
+        } else if (response.status === 200 && responseText.includes('<!DOCTYPE')) {
+          // HTML response - likely a routing issue
+          setAnalysisError('Server routing error. The analyze endpoint may not be configured correctly.');
+        } else {
+          setAnalysisError(`Server error (${response.status}). Response: ${responseText.substring(0, 100)}`);
+        }
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Check if response indicates success
+      if (!response.ok) {
+        setAnalysisError(data.message || `Server error (${response.status}). Please try again.`);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Check if document validation failed
+      if (!data.success || data.isValid === false) {
+        // Document is not medical or other error
+        setAnalysisError(data.message || 'This document does not appear to be a medical document.');
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Check if we have the expected data structure
+      if (!data.metadata) {
+        console.warn('[Wizard] Response missing metadata field:', data);
+        // Continue anyway - metadata might be empty
+      }
+
+      // Document is medical - extract metadata and pre-fill form
+      const metadata = data.metadata || {};
+      
+      // Update document data with extracted metadata
+      setDocumentData(prev => {
+        const updatedFields = prev.ocrFields.map(field => {
+          if (field.key === 'provider' && metadata.provider) {
+            return { ...field, value: metadata.provider, confidence: 0.9 };
+          }
+          if (field.key === 'date' && metadata.date) {
+            return { ...field, value: metadata.date, confidence: 0.9 };
+          }
+          if (field.key === 'title' && metadata.title) {
+            return { ...field, value: metadata.title, confidence: 0.9 };
+          }
+          return field;
+        });
+
+        return {
+          ...prev,
+          documentType: (metadata.documentType as DocumentType) || prev.documentType,
+          fileName: metadata.title || prev.fileName,
+          ocrFields: updatedFields,
+          tags: metadata.tags && metadata.tags.length > 0 ? metadata.tags : prev.tags,
+        };
+      });
+
+      setIsAnalyzing(false);
+      setCurrentStep(3);
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      setAnalysisError(error.message || 'Failed to analyze document. Please try again.');
+      setIsAnalyzing(false);
+    }
   };
 
   const handleSave = () => {
@@ -262,12 +523,25 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
   };
 
   const handleComplete = () => {
+    // Clean up camera if active
+    stopCamera();
+    
+    // Ensure preview is set from capturedImage if documentData.preview is empty
+    const finalPreview = documentData.preview || capturedImage || '';
+    
     if (onComplete) {
-      onComplete(documentData);
+      // Include the file and preview in the data
+      onComplete({
+        ...documentData,
+        preview: finalPreview,
+        file: uploadedFile || undefined,
+      });
     }
     setShowSuccess(false);
     setCurrentStep(1);
     setSourceMethod(null);
+    setUploadedFile(null);
+    setCapturedImage(null);
     setDocumentData({
       sourceMethod: null,
       fileName: '',
@@ -279,6 +553,13 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
       tags: ['lab', 'blood-test']
     });
   };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   const handleFieldChange = (key: string, value: string) => {
     setDocumentData(prev => ({
@@ -467,14 +748,68 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
         {renderProgressIndicator()}
       </div>
 
+      {/* Loading overlay for analysis */}
+      {isAnalyzing && (
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center px-6"
+          >
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Analyzing Document</h3>
+            <p className="text-sm text-gray-600">Extracting text and validating medical content...</p>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Error message */}
+      {analysisError && !isAnalyzing && (
+        <div className="px-6 py-4">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
+          >
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-900 mb-1">Not a Medical Document</h4>
+              <p className="text-sm text-red-700">{analysisError}</p>
+            </div>
+            <button
+              onClick={() => setAnalysisError(null)}
+              className="text-red-600 hover:text-red-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       <div className="flex-1 px-6 py-6 overflow-y-auto">
         {sourceMethod === 'camera' && (
           <div className="space-y-4" data-testid="camera-capture-view">
             <div className="relative aspect-[3/4] bg-gray-900 rounded-2xl overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-[85%] h-[90%] border-4 border-white/50 rounded-lg" />
-              </div>
-              {isCapturing && (
+              {cameraStream ? (
+                <video
+                  ref={(video) => {
+                    if (video && cameraStream) {
+                      video.srcObject = cameraStream;
+                      video.play();
+                    }
+                  }}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  playsInline
+                />
+              ) : capturedImage ? (
+                <img src={capturedImage} alt="Captured" className="w-full h-full object-contain" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-[85%] h-[90%] border-4 border-white/50 rounded-lg" />
+                </div>
+              )}
+              {isCapturing && captureQuality === 'detecting' && (
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -482,11 +817,11 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
                     className="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-full"
                     data-testid="capturing-indicator"
                   >
-                    <span className="text-sm font-medium text-gray-900">{t.capturing}</span>
+                    <span className="text-sm font-medium text-gray-900">{t.detectingEdges}</span>
                   </motion.div>
                 </div>
               )}
-              {!isCapturing && captureQuality === 'good' && (
+              {!isCapturing && captureQuality === 'good' && (capturedImage || cameraStream) && (
                 <div className="absolute top-4 left-0 right-0 flex justify-center">
                   <div className="bg-green-500 text-white px-4 py-2 rounded-full flex items-center gap-2" data-testid="quality-good-indicator">
                     <CheckCircle2 className="w-4 h-4" />
@@ -503,28 +838,78 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
                 </div>
               )}
             </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-              <Volume2 className="w-4 h-4" />
-              <span>{t.alignDocument}</span>
-            </div>
+            {!cameraStream && !capturedImage && (
+              <button
+                onClick={startCamera}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Start Camera
+              </button>
+            )}
+            {cameraStream && !capturedImage && (
+              <div className="flex gap-3">
+                <button
+                  onClick={stopCamera}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={capturePhoto}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Capture
+                </button>
+              </div>
+            )}
+            {capturedImage && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setCapturedImage(null);
+                    setUploadedFile(null);
+                    startCamera();
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Retake
+                </button>
+              </div>
+            )}
+            {cameraStream && (
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                <Volume2 className="w-4 h-4" />
+                <span>{t.alignDocument}</span>
+              </div>
+            )}
           </div>
         )}
 
         {sourceMethod === 'upload' && (
           <div className="space-y-4" data-testid="file-upload-view">
-            <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center">
+            <input
+              type="file"
+              id="file-upload"
+              accept=".pdf,.jpg,.jpeg,.png,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <label
+              htmlFor="file-upload"
+              className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 transition-colors block"
+            >
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <div className="text-gray-900 font-medium mb-1">{t.upload}</div>
               <div className="text-sm text-gray-500">{t.uploadDesc}</div>
-            </div>
-            {!isCapturing && captureQuality === 'good' && (
+            </label>
+            {uploadedFile && !isCapturing && (
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-3" data-testid="uploaded-file-preview">
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <FileText className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">lab_report_2024.pdf</div>
-                  <div className="text-sm text-gray-500">2.4 MB • PDF</div>
+                  <div className="font-medium text-gray-900">{documentData.fileName}</div>
+                  <div className="text-sm text-gray-500">{documentData.fileSize} • {documentData.fileType}</div>
                 </div>
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
               </div>
@@ -551,6 +936,14 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
               <div className="text-gray-900 font-medium mb-1">{t.qr}</div>
               <div className="text-sm text-gray-600">{t.qrDesc}</div>
             </div>
+            {!uploadedFile && (
+              <button
+                onClick={handleQRScan}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Scan QR Code / Import from ABHA
+              </button>
+            )}
             {isCapturing && (
               <div className="flex items-center justify-center py-8">
                 <motion.div
@@ -563,10 +956,13 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
                 </motion.div>
               </div>
             )}
-            {!isCapturing && captureQuality === 'good' && (
+            {uploadedFile && !isCapturing && (
               <div className="bg-green-50 rounded-xl p-4 flex items-center gap-3" data-testid="qr-success-indicator">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium text-green-900">ABHA record imported successfully</span>
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-green-900">ABHA record imported successfully</span>
+                  <div className="text-xs text-green-700 mt-1">{documentData.fileName}</div>
+                </div>
               </div>
             )}
           </div>
@@ -579,6 +975,19 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
               <div className="text-gray-900 font-medium mb-1">{t.dicom}</div>
               <div className="text-sm text-gray-600">{t.dicomDesc}</div>
             </div>
+            <input
+              type="file"
+              id="dicom-upload"
+              accept=".zip"
+              onChange={handleDicomImport}
+              className="hidden"
+            />
+            <label
+              htmlFor="dicom-upload"
+              className="block w-full px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors text-center cursor-pointer"
+            >
+              Select DICOM ZIP File
+            </label>
             {isCapturing && (
               <div className="flex items-center justify-center py-8">
                 <motion.div
@@ -591,14 +1000,14 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
                 </motion.div>
               </div>
             )}
-            {!isCapturing && captureQuality === 'good' && (
+            {uploadedFile && !isCapturing && (
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-3" data-testid="dicom-file-preview">
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <FileArchive className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">medical_imaging.zip</div>
-                  <div className="text-sm text-gray-500">2.4 MB • DICOM ZIP</div>
+                  <div className="font-medium text-gray-900">{documentData.fileName}</div>
+                  <div className="text-sm text-gray-500">{documentData.fileSize} • {documentData.fileType}</div>
                 </div>
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
               </div>
@@ -617,16 +1026,25 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
         </button>
         <button
           onClick={handleContinueFromCapture}
-          disabled={isCapturing || captureQuality !== 'good'}
+          disabled={isCapturing || isAnalyzing || (!uploadedFile && !capturedImage) || !!analysisError}
           className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-            !isCapturing && captureQuality === 'good'
+            !isCapturing && !isAnalyzing && (uploadedFile || capturedImage) && !analysisError
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
           data-testid="button-continue-step2"
         >
-          {t.continue}
-          <ChevronRight className="w-4 h-4" />
+          {isAnalyzing ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Analyzing...
+            </>
+          ) : (
+            <>
+              {t.continue}
+              <ChevronRight className="w-4 h-4" />
+            </>
+          )}
         </button>
       </div>
     </motion.div>
@@ -776,8 +1194,23 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
         )}
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="document-summary">
-          <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center">
-            <img src={documentData.preview} alt="Document preview" className="w-full h-full object-cover" />
+          <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center overflow-hidden">
+            {documentData.preview || capturedImage ? (
+              <img 
+                src={documentData.preview || capturedImage || ''} 
+                alt="Document preview" 
+                className="w-full h-full object-contain" 
+                onError={(e) => {
+                  console.error('Preview image failed to load');
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400">
+                <FileText className="w-16 h-16 mb-2" />
+                <span className="text-sm">No preview available</span>
+              </div>
+            )}
           </div>
           <div className="p-4 space-y-3">
             <div className="flex items-center gap-3">
@@ -892,7 +1325,7 @@ export const MediLockerAddDocumentWizard = (props: MediLockerAddDocumentWizardPr
   );
 
   return (
-    <div className="w-full h-screen max-w-[390px] mx-auto bg-white flex flex-col overflow-hidden" data-testid="wizard-container">
+    <div className="w-full h-screen max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white flex flex-col overflow-hidden" data-testid="wizard-container">
       <AnimatePresence mode="wait">
         {currentStep === 1 && <div key="step1" className="flex-1 flex flex-col overflow-hidden">{renderStep1()}</div>}
         {currentStep === 2 && <div key="step2" className="flex-1 flex flex-col overflow-hidden">{renderStep2()}</div>}

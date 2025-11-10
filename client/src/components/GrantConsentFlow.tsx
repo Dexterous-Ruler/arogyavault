@@ -15,10 +15,11 @@ import {
   Check, 
   QrCode, 
   Copy, 
-  MessageSquare, 
   Clock, 
   Info 
 } from 'lucide-react';
+import { useCreateConsent, useQRCode } from '@/hooks/useConsents';
+import type { CreateConsentData } from '@/lib/api/consents';
 
 type RecipientRole = 'doctor' | 'lab' | 'insurance' | 'family' | 'other';
 type ScopeType = 'documents' | 'emergency' | 'insights' | 'timeline';
@@ -55,7 +56,6 @@ type ConsentData = {
 
 type GrantConsentFlowProps = {
   language?: 'en' | 'hi';
-  isOffline?: boolean;
   onComplete?: (data: ConsentData) => void;
   onCancel?: () => void;
 };
@@ -111,7 +111,6 @@ const durations = [
 
 export const GrantConsentFlow = ({
   language: initialLanguage = 'en',
-  isOffline = false,
   onComplete,
   onCancel
 }: GrantConsentFlowProps) => {
@@ -123,8 +122,12 @@ export const GrantConsentFlow = ({
     duration: { type: '7d' },
     purpose: ''
   });
-  const [pin, setPin] = useState('');
+  const [customDate, setCustomDate] = useState<string>('');
   const [showNameInput, setShowNameInput] = useState(false);
+  const [createdConsentId, setCreatedConsentId] = useState<string | null>(null);
+
+  const createConsentMutation = useCreateConsent();
+  const { data: qrData, isLoading: qrLoading } = useQRCode(createdConsentId);
 
   const handleRecipientSelect = (role: RecipientRole) => {
     setConsentData(prev => ({
@@ -155,10 +158,34 @@ export const GrantConsentFlow = ({
     }
   };
 
-  const handleConfirm = () => {
-    if (pin.length === 4) {
-      setStep(5);
-      onComplete?.(consentData);
+  const handleConfirm = async () => {
+    // Validate required fields
+    if (!consentData.recipient.role || !consentData.recipient.name || consentData.scopes.length === 0) {
+      return;
+    }
+
+    try {
+      // Prepare API data
+      const apiData: CreateConsentData = {
+        recipientName: consentData.recipient.name,
+        recipientRole: consentData.recipient.role,
+        scopes: consentData.scopes,
+        durationType: consentData.duration.type,
+        customExpiryDate: consentData.duration.type === 'custom' && customDate ? customDate : undefined,
+        purpose: consentData.purpose || 'Medical record sharing',
+      };
+
+      // Create consent
+      const result = await createConsentMutation.mutateAsync(apiData);
+      
+      if (result.success && result.consent) {
+        setCreatedConsentId(result.consent.id);
+        setStep(5);
+        onComplete?.(consentData);
+      }
+    } catch (error) {
+      console.error('Failed to create consent:', error);
+      // Error toast is handled by the mutation hook
     }
   };
 
@@ -179,13 +206,14 @@ export const GrantConsentFlow = ({
       duration: { type: '7d' },
       purpose: ''
     });
-    setPin('');
+    setCustomDate('');
     setShowNameInput(false);
+    setCreatedConsentId(null);
     onCancel?.();
   };
 
   return (
-    <div className="w-full h-screen bg-white flex flex-col max-w-[390px] mx-auto" data-testid="grant-consent-flow">
+    <div className="w-full h-screen bg-white flex flex-col max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto" data-testid="grant-consent-flow">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200" data-testid="header">
         {step > 1 && step < 5 && (
@@ -355,22 +383,6 @@ export const GrantConsentFlow = ({
                   );
                 })}
               </div>
-
-              {isOffline && (
-                <div 
-                  className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3" 
-                  role="status" 
-                  aria-live="polite"
-                  data-testid="offline-notice"
-                >
-                  <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-800">
-                    {language === 'en'
-                      ? 'If offline, this consent will be queued and synced later.'
-                      : 'यदि ऑफ़लाइन है, तो यह सहमति कतारबद्ध होगी और बाद में सिंक होगी।'}
-                  </p>
-                </div>
-              )}
             </motion.div>
           )}
 
@@ -397,32 +409,54 @@ export const GrantConsentFlow = ({
                     const Icon = duration.icon;
                     const isSelected = consentData.duration.type === duration.id;
                     return (
-                      <button
-                        key={duration.id}
-                        onClick={() =>
-                          setConsentData(prev => ({
-                            ...prev,
-                            duration: { ...prev.duration, type: duration.id }
-                          }))
-                        }
-                        className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                          isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                        aria-pressed={isSelected}
-                        data-testid={`button-duration-${duration.id}`}
-                      >
-                        <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-600' : 'bg-gray-100'}`}>
-                          <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-700'}`} />
-                        </div>
-                        <span className="text-lg font-medium text-gray-900">
-                          {language === 'en' ? duration.label : duration.labelHi}
-                        </span>
-                        {isSelected && (
-                          <div className="ml-auto w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center" aria-hidden="true">
-                            <Check className="w-4 h-4 text-white" />
+                      <div key={duration.id}>
+                        <button
+                          onClick={() =>
+                            setConsentData(prev => ({
+                              ...prev,
+                              duration: { ...prev.duration, type: duration.id }
+                            }))
+                          }
+                          className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                            isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                          aria-pressed={isSelected}
+                          data-testid={`button-duration-${duration.id}`}
+                        >
+                          <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-600' : 'bg-gray-100'}`}>
+                            <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-700'}`} />
                           </div>
+                          <span className="text-lg font-medium text-gray-900">
+                            {language === 'en' ? duration.label : duration.labelHi}
+                          </span>
+                          {isSelected && (
+                            <div className="ml-auto w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center" aria-hidden="true">
+                              <Check className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </button>
+                        
+                        {isSelected && duration.id === 'custom' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mt-3 px-4"
+                          >
+                            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="customDate">
+                              {language === 'en' ? 'Select expiry date' : 'समाप्ति तिथि चुनें'}
+                            </label>
+                            <input
+                              id="customDate"
+                              type="date"
+                              min={new Date().toISOString().split('T')[0]}
+                              value={customDate}
+                              onChange={e => setCustomDate(e.target.value)}
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-600"
+                              data-testid="input-custom-date"
+                            />
+                          </motion.div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -523,52 +557,21 @@ export const GrantConsentFlow = ({
                 <div className="pt-2">
                   <div className="text-xs text-gray-500">
                     {language === 'en'
-                      ? 'Offline consents will be queued and synced automatically.'
-                      : 'ऑफ़लाइन सहमतियाँ कतारबद्ध होंगी और स्वचालित रूप से सिंक होंगी।'}
+                      ? 'Consent will be created and a shareable link will be generated.'
+                      : 'सहमति बनाई जाएगी और एक साझा करने योग्य लिंक उत्पन्न होगा।'}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3" htmlFor="pin-0">
-                  {language === 'en' ? 'Enter PIN to Confirm' : 'पुष्टि करने के लिए PIN दर्ज करें'}
-                </label>
-                <div className="flex gap-3 justify-center" data-testid="pin-inputs">
-                  {[0, 1, 2, 3].map(i => (
-                    <input
-                      key={i}
-                      id={`pin-${i}`}
-                      type="password"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={1}
-                      value={pin[i] || ''}
-                      onChange={e => {
-                        const value = e.target.value;
-                        if (value.length <= 1 && /^\d*$/.test(value)) {
-                          const newPin = pin.split('');
-                          newPin[i] = value;
-                          setPin(newPin.join(''));
-                          if (value && i < 3) {
-                            const nextInput = e.target.parentElement?.children[i + 1] as HTMLInputElement;
-                            nextInput?.focus();
-                          }
-                        }
-                      }}
-                      className="w-14 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                      aria-label={`PIN digit ${i + 1}`}
-                      data-testid={`input-pin-${i}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
               <button 
-                className="mt-4 text-sm text-blue-600 font-medium" 
-                aria-label="Use biometric"
-                data-testid="button-biometric"
+                onClick={handleConfirm}
+                disabled={createConsentMutation.isPending}
+                className="mt-6 w-full py-4 bg-blue-600 text-white rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+                data-testid="button-confirm"
               >
-                {language === 'en' ? 'Use Biometric' : 'बायोमेट्रिक का उपयोग करें'}
+                {createConsentMutation.isPending
+                  ? (language === 'en' ? 'Creating...' : 'बनाया जा रहा है...')
+                  : (language === 'en' ? 'Confirm & Generate' : 'पुष्टि करें और उत्पन्न करें')}
               </button>
             </motion.div>
           )}
@@ -605,15 +608,25 @@ export const GrantConsentFlow = ({
               <div 
                 className="w-48 h-48 bg-white border-4 border-gray-200 rounded-xl flex items-center justify-center mb-8" 
                 role="img" 
-                aria-label="QR code placeholder"
+                aria-label="QR code"
                 data-testid="qr-code"
               >
-                <QrCode className="w-32 h-32 text-gray-400" />
+                {qrLoading ? (
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                ) : qrData?.success && qrData.qrCode ? (
+                  <img src={qrData.qrCode} alt="QR Code" className="w-full h-full p-2" />
+                ) : (
+                  <QrCode className="w-32 h-32 text-gray-400" />
+                )}
               </div>
 
               <div className="w-full space-y-3">
                 <button
-                  onClick={() => copyToClipboard('https://medilocker.in/consent/1234')}
+                  onClick={() => {
+                    if (qrData?.success && qrData.shareableUrl) {
+                      copyToClipboard(qrData.shareableUrl);
+                    }
+                  }}
                   className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-center gap-3 hover:border-gray-300 transition-all"
                   aria-label="Copy shareable link"
                   data-testid="button-copy-link"
@@ -621,18 +634,6 @@ export const GrantConsentFlow = ({
                   <Copy className="w-5 h-5 text-gray-700" />
                   <span className="font-medium text-gray-900">
                     {language === 'en' ? 'Copy Link' : 'लिंक कॉपी करें'}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => {}}
-                  className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-center gap-3 hover:border-gray-300 transition-all"
-                  aria-label="Send SMS"
-                  data-testid="button-send-sms"
-                >
-                  <MessageSquare className="w-5 h-5 text-gray-700" />
-                  <span className="font-medium text-gray-900">
-                    {language === 'en' ? 'Send via SMS' : 'SMS के माध्यम से भेजें'}
                   </span>
                 </button>
               </div>
@@ -647,10 +648,9 @@ export const GrantConsentFlow = ({
           <button
             onClick={step === 4 ? handleConfirm : handleNext}
             disabled={
-              (step === 1 && !consentData.recipient.role) ||
-              (step === 1 && !consentData.recipient.name) ||
+              (step === 1 && (!consentData.recipient.role || !consentData.recipient.name)) ||
               (step === 2 && consentData.scopes.length === 0) ||
-              (step === 4 && pin.length !== 4)
+              (step === 3 && consentData.duration.type === 'custom' && !customDate)
             }
             className="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
             data-testid="button-next"

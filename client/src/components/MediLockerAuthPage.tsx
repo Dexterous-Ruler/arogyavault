@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ChevronDown, Info, Phone, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
+import { LanguageSelector } from '@/i18n/LanguageSelector';
 
-type Language = 'en' | 'hi';
-
-type MediLockerAuthPageProps = {
+type ArogyaVaultAuthPageProps = {
   onContinueWithOTP?: (phoneNumber: string) => void;
   onContinueWithABHA?: () => void;
   onContinueAsGuest?: () => void;
-  onContinueWithEmail?: () => void;
+  onContinueWithEmail?: (email: string) => void;
 };
 
 const translations = {
@@ -57,30 +57,25 @@ const validatePhoneNumber = (phone: string): boolean => {
   return phoneRegex.test(phone);
 };
 
-export const MediLockerAuthPage = ({
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+export const ArogyaVaultAuthPage = ({
   onContinueWithOTP,
   onContinueWithABHA,
   onContinueAsGuest,
   onContinueWithEmail
-}: MediLockerAuthPageProps) => {
-  const [language, setLanguage] = useState<Language>('en');
+}: ArogyaVaultAuthPageProps) => {
+  const { translations: t, language } = useTranslation();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [authMode, setAuthMode] = useState<'phone' | 'email'>('phone');
   const [showError, setShowError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showPrivacySheet, setShowPrivacySheet] = useState(false);
   const [guidedMode, setGuidedMode] = useState(false);
-
-  const t = translations[language];
-
-  const toggleLanguage = () => {
-    setShowLanguageMenu(!showLanguageMenu);
-  };
-
-  const selectLanguage = (lang: Language) => {
-    setLanguage(lang);
-    setShowLanguageMenu(false);
-  };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -90,32 +85,66 @@ export const MediLockerAuthPage = ({
     }
   };
 
-  const handleContinue = () => {
-    if (!validatePhoneNumber(phoneNumber)) {
-      setShowError(true);
-      return;
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (showError) {
+      setShowError(false);
     }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      onContinueWithOTP?.(phoneNumber);
-    }, 1500);
   };
 
-  const isValid = validatePhoneNumber(phoneNumber);
+  const handleContinue = () => {
+    if (authMode === 'phone') {
+      if (!validatePhoneNumber(phoneNumber)) {
+        setShowError(true);
+        return;
+      }
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        onContinueWithOTP?.(phoneNumber);
+      }, 1500);
+    } else {
+      if (!validateEmail(email)) {
+        setShowError(true);
+        return;
+      }
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        onContinueWithEmail?.(email);
+      }, 1500);
+    }
+  };
+
+  const handleSwitchToEmail = () => {
+    setAuthMode('email');
+    setPhoneNumber('');
+    setShowError(false);
+  };
+
+  const handleSwitchToPhone = () => {
+    setAuthMode('phone');
+    setEmail('');
+    setShowError(false);
+  };
+
+  const isValid = authMode === 'phone' 
+    ? validatePhoneNumber(phoneNumber)
+    : validateEmail(email);
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-blue-50/30 to-transparent pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col min-h-screen px-6 py-8 max-w-[390px] md:max-w-md lg:max-w-lg xl:max-w-xl mx-auto w-full">
+      <div className="relative z-10 flex flex-col min-h-screen px-6 md:px-8 lg:px-10 py-8 md:py-10 lg:py-12 max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto w-full">
         <div className="flex items-start justify-between mb-8 md:mb-12">
           <div className="flex items-center gap-3">
             <motion.div
               initial={{ scale: 0.8, opacity: 0, rotate: -5 }}
               animate={{ scale: 1, opacity: 1, rotate: 0 }}
               transition={{ duration: 0.7, type: "spring", stiffness: 100 }}
-              className="relative w-[72px] h-[72px] md:w-20 md:h-20 rounded-[20px] overflow-hidden shadow-2xl shadow-blue-600/20"
+              className="relative w-[72px] h-[72px] md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-[20px] overflow-hidden shadow-2xl shadow-blue-600/20"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -168,53 +197,10 @@ export const MediLockerAuthPage = ({
               data-testid="button-guided-mode"
               aria-label="Toggle guided mode for accessibility"
             >
-              {t.guidedMode}
+              {t.auth.guidedMode}
             </button>
-            <div className="relative">
-              <button
-                onClick={toggleLanguage}
-                className="flex items-center gap-1 px-3 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                data-testid="button-language-toggle"
-                aria-label="Change language"
-                aria-expanded={showLanguageMenu}
-              >
-                <span className="text-sm font-medium text-gray-700">
-                  {language === 'en' ? 'EN' : 'हिं'}
-                </span>
-                <ChevronDown className="w-4 h-4 text-gray-600" />
-              </button>
-              <AnimatePresence>
-                {showLanguageMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50"
-                    role="menu"
-                  >
-                    <button
-                      onClick={() => selectLanguage('en')}
-                      className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 transition-colors"
-                      data-testid="button-language-en"
-                      role="menuitem"
-                    >
-                      <span className={language === 'en' ? 'font-semibold text-blue-600' : 'text-gray-700'}>
-                        English
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => selectLanguage('hi')}
-                      className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 transition-colors"
-                      data-testid="button-language-hi"
-                      role="menuitem"
-                    >
-                      <span className={language === 'hi' ? 'font-semibold text-blue-600' : 'text-gray-700'}>
-                        हिंदी
-                      </span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="min-w-[120px]">
+              <LanguageSelector variant="compact" className="w-full" />
             </div>
           </div>
         </div>
@@ -226,10 +212,10 @@ export const MediLockerAuthPage = ({
           className="text-center mb-8 md:mb-12"
         >
           <h1 className={`font-bold text-blue-600 mb-2 ${guidedMode ? 'text-3xl md:text-4xl' : 'text-[28px] md:text-3xl'}`}>
-            {t.appName}
+            {t.common.appName}
           </h1>
           <p className={`text-gray-600 ${guidedMode ? 'text-base md:text-lg' : 'text-sm md:text-base'}`}>
-            {t.subtitle}
+            {t.common.subtitle}
           </p>
         </motion.div>
 
@@ -240,51 +226,96 @@ export const MediLockerAuthPage = ({
           className="bg-white rounded-3xl p-6 md:p-8 shadow-xl shadow-gray-200/50 border border-gray-100 mb-6"
         >
           <h2 className={`font-bold text-gray-900 mb-2 ${guidedMode ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}>
-            {t.signInTitle}
+            {t.auth.signInTitle}
           </h2>
           <p className={`text-gray-600 mb-6 ${guidedMode ? 'text-base md:text-lg' : 'text-sm md:text-base'}`}>
-            {t.signInDesc}
+            {t.auth.signInDesc}
           </p>
 
           <div className="mb-6">
-            <div className="relative">
-              <div className="flex items-stretch rounded-xl border-2 border-gray-200 focus-within:border-blue-500 transition-colors overflow-hidden">
-                <div className="flex items-center px-4 bg-gray-50 border-r-2 border-gray-200">
-                  <Phone className="w-4 h-4 text-gray-500 mr-2" />
-                  <span className="text-sm font-semibold text-gray-700">+91</span>
+            {authMode === 'phone' ? (
+              <>
+                <div className="relative">
+                  <div className="flex items-stretch rounded-xl border-2 border-gray-200 focus-within:border-blue-500 transition-colors overflow-hidden">
+                    <div className="flex items-center px-4 bg-gray-50 border-r-2 border-gray-200">
+                      <Phone className="w-4 h-4 text-gray-500 mr-2" />
+                      <span className="text-sm font-semibold text-gray-700">+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={handlePhoneChange}
+                      placeholder={t.auth.phonePlaceholder}
+                      className={`flex-1 px-4 py-4 outline-none bg-white ${guidedMode ? 'text-lg' : 'text-base'}`}
+                      data-testid="input-phone-number"
+                      aria-label="Phone number"
+                      aria-invalid={showError}
+                      aria-describedby={showError ? "phone-error" : "phone-helper"}
+                    />
+                  </div>
+                  <AnimatePresence>
+                    {showError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="flex items-center gap-1 mt-2 text-red-600"
+                        id="phone-error"
+                        role="alert"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-xs font-medium">{t.auth.invalidNumber}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={handlePhoneChange}
-                  placeholder={t.phonePlaceholder}
-                  className={`flex-1 px-4 py-4 outline-none bg-white ${guidedMode ? 'text-lg' : 'text-base'}`}
-                  data-testid="input-phone-number"
-                  aria-label="Phone number"
-                  aria-invalid={showError}
-                  aria-describedby={showError ? "phone-error" : "phone-helper"}
-                />
-              </div>
-              <AnimatePresence>
-                {showError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="flex items-center gap-1 mt-2 text-red-600"
-                    id="phone-error"
-                    role="alert"
-                  >
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-xs font-medium">{t.invalidNumber}</span>
-                  </motion.div>
+                {!showError && (
+                  <p className={`mt-2 text-gray-500 ${guidedMode ? 'text-sm' : 'text-xs'}`} id="phone-helper">
+                    {t.auth.phoneHelper}
+                  </p>
                 )}
-              </AnimatePresence>
-            </div>
-            {!showError && (
-              <p className={`mt-2 text-gray-500 ${guidedMode ? 'text-sm' : 'text-xs'}`} id="phone-helper">
-                {t.phoneHelper}
-              </p>
+              </>
+            ) : (
+              <>
+                <div className="relative">
+                  <div className="flex items-stretch rounded-xl border-2 border-gray-200 focus-within:border-blue-500 transition-colors overflow-hidden">
+                    <div className="flex items-center px-4 bg-gray-50 border-r-2 border-gray-200">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={handleEmailChange}
+                      placeholder="Enter your email"
+                      className={`flex-1 px-4 py-4 outline-none bg-white ${guidedMode ? 'text-lg' : 'text-base'}`}
+                      data-testid="input-email"
+                      aria-label="Email address"
+                      aria-invalid={showError}
+                      aria-describedby={showError ? "email-error" : "email-helper"}
+                    />
+                  </div>
+                  <AnimatePresence>
+                    {showError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="flex items-center gap-1 mt-2 text-red-600"
+                        id="email-error"
+                        role="alert"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-xs font-medium">Invalid email address</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                {!showError && (
+                  <p className={`mt-2 text-gray-500 ${guidedMode ? 'text-sm' : 'text-xs'}`} id="email-helper">
+                    We'll send a 6-digit OTP to your email.
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -296,16 +327,16 @@ export const MediLockerAuthPage = ({
                 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
-            data-testid="button-continue-otp"
-            aria-label="Continue with OTP"
+            data-testid={authMode === 'phone' ? "button-continue-otp" : "button-continue-email"}
+            aria-label={authMode === 'phone' ? "Continue with OTP" : "Continue with Email"}
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>{t.loading}</span>
+                <span>{t.auth.sendingOTP}</span>
               </>
             ) : (
-              t.continueWithOTP
+              authMode === 'phone' ? t.auth.continueWithOTP : t.auth.continueWithEmail
             )}
           </button>
 
@@ -314,7 +345,7 @@ export const MediLockerAuthPage = ({
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-white px-4 text-sm text-gray-500">{t.or}</span>
+              <span className="bg-white px-4 text-sm text-gray-500">{t.common.or}</span>
             </div>
           </div>
 
@@ -325,7 +356,7 @@ export const MediLockerAuthPage = ({
               data-testid="button-continue-abha"
               aria-label="Continue with ABHA ID"
             >
-              {t.useABHA}
+              {t.auth.useABHA}
             </button>
             <div className="flex gap-3">
               <button
@@ -334,16 +365,25 @@ export const MediLockerAuthPage = ({
                 data-testid="button-continue-guest"
                 aria-label="Continue as guest"
               >
-                {t.continueAsGuest}
+                {t.auth.continueAsGuest}
               </button>
               <button
-                onClick={onContinueWithEmail}
+                onClick={authMode === 'phone' ? handleSwitchToEmail : handleSwitchToPhone}
                 className={`flex-1 rounded-xl border border-gray-200 font-medium text-gray-600 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 ${guidedMode ? 'py-4 text-base' : 'py-3 text-sm'}`}
-                data-testid="button-continue-email"
-                aria-label="Continue with email"
+                data-testid="button-switch-auth-mode"
+                aria-label={authMode === 'phone' ? "Switch to email" : "Switch to phone"}
               >
-                <Mail className="w-4 h-4" />
-                <span>{t.continueWithEmail}</span>
+                {authMode === 'phone' ? (
+                  <>
+                    <Mail className="w-4 h-4" />
+                    <span>{t.auth.continueWithEmail}</span>
+                  </>
+                ) : (
+                  <>
+                    <Phone className="w-4 h-4" />
+                    <span>Use Phone</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -359,17 +399,17 @@ export const MediLockerAuthPage = ({
           aria-label="View privacy information"
         >
           <Lock className="w-4 h-4" />
-          <span className="font-medium">{t.trustMessage}</span>
+          <span className="font-medium">{t.auth.trustMessage}</span>
           <Info className="w-4 h-4" />
         </motion.button>
 
         <div className="mt-auto pt-6 flex items-center justify-center gap-4 text-xs text-gray-500">
           <button className="hover:text-blue-600 transition-colors" data-testid="button-terms-privacy">
-            {t.termsPrivacy}
+            {t.auth.termsPrivacy}
           </button>
           <span>•</span>
           <button className="hover:text-blue-600 transition-colors" data-testid="button-need-help">
-            {t.needHelp}
+            {t.auth.needHelp}
           </button>
         </div>
       </div>
@@ -400,19 +440,15 @@ export const MediLockerAuthPage = ({
                   <Lock className="w-6 h-6 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900" id="privacy-title">
-                  {language === 'en' ? 'Your Privacy' : 'आपकी गोपनीयता'}
+                  {t.auth.privacy || 'Your Privacy'}
                 </h3>
               </div>
               <div className="space-y-3 mb-6 text-sm text-gray-600">
                 <p>
-                  {language === 'en'
-                    ? 'Your health data is encrypted end-to-end and stored securely. Only you have access to your records.'
-                    : 'आपका स्वास्थ्य डेटा एंड-टू-एंड एन्क्रिप्टेड है और सुरक्षित रूप से संग्रहीत है। केवल आपके पास अपने रिकॉर्ड तक पहुंच है।'}
+                  {t.auth.trustMessage}
                 </p>
                 <p>
-                  {language === 'en'
-                    ? 'We never share your data with third parties without your explicit consent.'
-                    : 'हम आपकी स्पष्ट सहमति के बिना आपके डेटा को तृतीय पक्षों के साथ कभी साझा नहीं करते हैं।'}
+                  {t.auth.trustMessage}
                 </p>
               </div>
               <button
@@ -420,7 +456,7 @@ export const MediLockerAuthPage = ({
                 className="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
                 data-testid="button-privacy-close"
               >
-                {language === 'en' ? 'Got it' : 'समझ गया'}
+                {t.common.ok}
               </button>
             </motion.div>
           </>
