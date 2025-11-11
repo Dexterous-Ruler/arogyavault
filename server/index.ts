@@ -79,8 +79,8 @@ app.use((req, res, next) => {
         const setCookieHeader = res.getHeader('Set-Cookie');
         log(`[Cookie Debug] ${path} - Set-Cookie: ${setCookieHeader ? 'present' : 'missing'}`);
         if (setCookieHeader) {
-          const cookieValue = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
-          log(`[Cookie Debug] ${path} - Cookie: ${cookieValue?.substring(0, 100)}...`);
+          const cookieValue = Array.isArray(setCookieHeader) ? setCookieHeader[0] : String(setCookieHeader);
+          log(`[Cookie Debug] ${path} - Cookie: ${cookieValue.substring(0, 100)}...`);
         }
         log(`[Cookie Debug] ${path} - Request cookies: ${req.headers.cookie || 'none'}`);
       }

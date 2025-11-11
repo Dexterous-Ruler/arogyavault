@@ -189,8 +189,8 @@ router.post(
         const setCookieHeader = res.getHeader('Set-Cookie');
         console.log(`[Auth] Response finished. Set-Cookie header:`, setCookieHeader ? 'present' : 'missing');
         if (setCookieHeader) {
-          const cookieStr = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
-          console.log(`[Auth] Cookie value (first 100 chars):`, cookieStr?.substring(0, 100));
+          const cookieStr = Array.isArray(setCookieHeader) ? setCookieHeader[0] : String(setCookieHeader);
+          console.log(`[Auth] Cookie value (first 100 chars):`, cookieStr.substring(0, 100));
         }
         console.log(`[Auth] Response headers:`, {
           'set-cookie': setCookieHeader ? 'present' : 'missing',
