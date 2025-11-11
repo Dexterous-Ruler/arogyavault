@@ -18,6 +18,11 @@ export async function createUserSession(
   userId: string,
   req: Request
 ): Promise<string> {
+  console.log(`[SessionService] ========== createUserSession CALLED ==========`);
+  console.log(`[SessionService] UserId: ${userId}`);
+  console.log(`[SessionService] Request session ID: ${req.sessionID}`);
+  console.log(`[SessionService] Request has session: ${!!req.session}`);
+  
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + config.session.maxAge);
 

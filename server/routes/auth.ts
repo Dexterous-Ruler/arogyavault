@@ -133,7 +133,10 @@ router.post(
         console.log(`[Auth] Found existing user in Supabase: ${user.id} for phone: ${phoneNumber}`);
       }
 
-      // Create session
+      // Create session - CRITICAL STEP
+      console.log(`[Auth] ========== STARTING SESSION CREATION ==========`);
+      console.log(`[Auth] User ID: ${user.id}`);
+      console.log(`[Auth] About to call createUserSession...`);
       console.log(`[Auth] Creating session for user ${user.id}...`);
       let sessionToken: string;
       try {
