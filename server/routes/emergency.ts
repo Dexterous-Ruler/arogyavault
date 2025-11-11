@@ -48,7 +48,7 @@ router.get("/card", requireAuth, async (req: Request, res: Response, next: NextF
     }
 
     // Generate QR code URL
-    const qrUrl = generateEmergencyCardURL(emergencyCard.qrCodeToken);
+    const qrUrl = generateEmergencyCardURL(emergencyCard.qrCodeToken, req);
     const qrCodeDataURL = await generateQRCodeDataURL(qrUrl);
 
     res.json({
@@ -116,7 +116,7 @@ router.put(
       });
 
       // Generate QR code
-      const qrUrl = generateEmergencyCardURL(emergencyCard.qrCodeToken);
+      const qrUrl = generateEmergencyCardURL(emergencyCard.qrCodeToken, req);
       const qrCodeDataURL = await generateQRCodeDataURL(qrUrl);
 
       res.json({
@@ -214,7 +214,7 @@ router.get("/qr-image/:token", async (req: Request, res: Response, next: NextFun
     }
 
     // Generate QR code
-    const qrUrl = generateEmergencyCardURL(token);
+    const qrUrl = generateEmergencyCardURL(token, req);
     const qrCodeDataURL = await generateQRCodeDataURL(qrUrl);
 
     res.json({

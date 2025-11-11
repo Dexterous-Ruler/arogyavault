@@ -9,6 +9,7 @@ import { storage } from "../storage";
 import { requireAuth } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import QRCode from "qrcode";
+import { getFullURL } from "../utils/urlHelper";
 
 const router = Router();
 
@@ -517,19 +518,8 @@ router.get("/:id/qr", requireAuth, async (req: Request, res: Response, next: Nex
       });
     }
 
-    // Generate shareable URL
-    // Priority: FRONTEND_URL env var > Cloudflare tunnel detection > localhost
-    let baseUrl = process.env.FRONTEND_URL;
-    
-    if (!baseUrl) {
-      // Try to detect Cloudflare tunnel URL from environment or use localhost
-      // For production, FRONTEND_URL should be set explicitly
-      baseUrl = process.env.CLOUDFLARE_TUNNEL_URL || "http://localhost:3000";
-    }
-    
-    // Ensure URL doesn't end with slash
-    baseUrl = baseUrl.replace(/\/$/, '');
-    const shareableUrl = `${baseUrl}/share/${consent.shareableToken}`;
+    // Generate shareable URL using URL helper utility
+    const shareableUrl = getFullURL(`/share/${consent.shareableToken}`, req);
 
     // Generate QR code
     try {

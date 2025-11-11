@@ -86,6 +86,17 @@ PORT
 - Default: `3000`
 
 ```
+FRONTEND_URL
+```
+**Value**: `https://pbl-tanishq-production.up.railway.app` (your Railway public URL)
+- **CRITICAL**: Required for emergency card QR codes and consent sharing
+- Used to generate shareable URLs and QR codes
+- Must be your production Railway URL
+- **Format**: `https://your-app-name.up.railway.app` (no trailing slash)
+- If not set, defaults to production URL or localhost (development)
+- **Important**: This ensures QR codes and share links work in production
+
+```
 TRUST_PROXY
 ```
 **Value**: `true` (optional, defaults to true in production)
@@ -169,7 +180,8 @@ OPENAI_API_KEY
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` - Service role key
 - [ ] `SUPABASE_ANON_KEY` - Anon key
 
-### Step 4: Set Railway Variables (Optional)
+### Step 4: Set Railway Variables (Optional but Recommended)
+- [ ] `FRONTEND_URL=https://pbl-tanishq-production.up.railway.app` - Frontend URL (REQUIRED for QR codes and sharing)
 - [ ] `PORT=3000` - Port (Railway sets this automatically)
 - [ ] `TRUST_PROXY=true` - Trust proxy (defaults to true)
 
@@ -226,7 +238,8 @@ After setting variables, check Railway logs for:
 2. **USE_DATABASE must be 'true'**: Must be exactly the string `true`, not a boolean
 3. **SESSION_SECRET must be strong**: Use a random 32+ character string
 4. **NODE_ENV must be 'production'**: This enables secure cookies
-5. **All sensitive keys must be kept secret**: Never commit them to Git
+5. **FRONTEND_URL is REQUIRED**: Without it, QR codes and share links will use localhost (broken in production)
+6. **All sensitive keys must be kept secret**: Never commit them to Git
 
 ## Troubleshooting
 

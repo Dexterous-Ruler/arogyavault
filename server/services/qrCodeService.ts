@@ -5,6 +5,8 @@
 
 import QRCode from 'qrcode';
 import { randomUUID } from 'crypto';
+import { Request } from 'express';
+import { getFullURL } from '../utils/urlHelper';
 
 /**
  * Generate a unique token for QR code
@@ -46,7 +48,7 @@ export async function generateQRCodeBuffer(url: string): Promise<Buffer> {
   try {
     const qrBuffer = await QRCode.toBuffer(url, {
       errorCorrectionLevel: 'M',
-      type: 'image/png',
+      type: 'png',
       width: 300,
       margin: 1,
       color: {
@@ -63,11 +65,10 @@ export async function generateQRCodeBuffer(url: string): Promise<Buffer> {
 /**
  * Generate QR code URL for emergency card
  * @param token - The QR code token
- * @param baseUrl - Base URL of the application (defaults to localhost:3000)
+ * @param req - Optional Express request object for runtime URL detection
  * @returns The full URL to encode in QR code
  */
-export function generateEmergencyCardURL(token: string, baseUrl?: string): string {
-  const base = baseUrl || process.env.FRONTEND_URL || 'http://localhost:3000';
-  return `${base}/emergency/view/${token}`;
+export function generateEmergencyCardURL(token: string, req?: Request): string {
+  return getFullURL(`/emergency/view/${token}`, req);
 }
 

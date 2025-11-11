@@ -58,6 +58,15 @@ export const config = {
     nodeEnv: process.env.NODE_ENV || "development",
   },
 
+  // Frontend Configuration
+  frontend: {
+    url: process.env.FRONTEND_URL || (
+      process.env.NODE_ENV === "production"
+        ? "https://pbl-tanishq-production.up.railway.app"
+        : `http://localhost:${process.env.PORT || "3000"}`
+    ),
+  },
+
   // Email Configuration
   email: {
     provider: (process.env.EMAIL_PROVIDER || "smtp") as "resend" | "smtp" | "mock",
