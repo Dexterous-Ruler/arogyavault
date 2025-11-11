@@ -1,0 +1,88 @@
+# ============================================
+# RAILWAY ENVIRONMENT VARIABLES
+# Copy and paste this into Railway's Raw Editor
+# Replace all <PLACEHOLDER> values with your actual values
+# ============================================
+
+# ============================================
+# REQUIRED - Core Configuration
+# ============================================
+NODE_ENV=production
+PORT=3000
+USE_DATABASE=true
+
+# ============================================
+# REQUIRED - Session Security
+# ============================================
+# Generate with: openssl rand -base64 32
+# Or use: https://www.random.org/strings/?num=1&len=32&digits=on&upperalpha=on&loweralpha=on&unique=on&format=plain&rnd=new
+SESSION_SECRET=<GENERATE-A-RANDOM-32-CHARACTER-STRING>
+
+# ============================================
+# REQUIRED - Supabase Database
+# ============================================
+# Get these from: https://supabase.com/dashboard → Your Project → Settings → API
+SUPABASE_URL=<YOUR-SUPABASE-PROJECT-URL>
+SUPABASE_SERVICE_ROLE_KEY=<YOUR-SUPABASE-SERVICE-ROLE-KEY>
+SUPABASE_ANON_KEY=<YOUR-SUPABASE-ANON-KEY>
+
+# ============================================
+# RECOMMENDED - Email Configuration (Resend SMTP)
+# ============================================
+# Get Resend API key from: https://resend.com/api-keys
+EMAIL_PROVIDER=smtp
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USERNAME=resend
+SMTP_PASSWORD=<YOUR-RESEND-API-KEY>
+EMAIL_FROM=team@arogyavault.me
+EMAIL_FROM_NAME=Arogya Vault
+
+# ============================================
+# OPTIONAL - Push Notifications (VAPID)
+# ============================================
+# Generate with: npx tsx server/scripts/generateVAPIDKeys.ts
+# Or leave empty to use mock service
+VAPID_PUBLIC_KEY=<YOUR-VAPID-PUBLIC-KEY>
+VAPID_PRIVATE_KEY=<YOUR-VAPID-PRIVATE-KEY>
+VAPID_SUBJECT=mailto:team@arogyavault.me
+
+# ============================================
+# OPTIONAL - OpenAI (for AI features)
+# ============================================
+# Get from: https://platform.openai.com/api-keys
+# Leave empty if not using AI features
+OPENAI_API_KEY=<YOUR-OPENAI-API-KEY>
+
+# ============================================
+# OPTIONAL - SMS/Twilio (for real SMS OTP)
+# ============================================
+# Get from: https://console.twilio.com
+# Set SMS_PROVIDER=mock to disable (default)
+SMS_PROVIDER=mock
+TWILIO_ACCOUNT_SID=<YOUR-TWILIO-ACCOUNT-SID>
+TWILIO_AUTH_TOKEN=<YOUR-TWILIO-AUTH-TOKEN>
+TWILIO_FROM_NUMBER=<YOUR-TWILIO-PHONE-NUMBER>
+ENABLE_REAL_OTP=false
+
+# ============================================
+# OPTIONAL - Feature Flags
+# ============================================
+ENABLE_RATE_LIMIT=true
+
+# ============================================
+# OPTIONAL - Alternative Email Provider (Resend API)
+# ============================================
+# If you prefer Resend API instead of SMTP, use these:
+# EMAIL_PROVIDER=resend
+# RESEND_API_KEY=<YOUR-RESEND-API-KEY>
+# (Remove SMTP_* variables if using this)
+
+# ============================================
+# OPTIONAL - MSG91 SMS Provider
+# ============================================
+# If using MSG91 instead of Twilio:
+# MSG91_AUTH_KEY=<YOUR-MSG91-AUTH-KEY>
+# MSG91_TEMPLATE_ID=<YOUR-MSG91-TEMPLATE-ID>
+

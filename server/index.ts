@@ -28,6 +28,8 @@ app.use(
       httpOnly: true,
       maxAge: config.session.maxAge,
       sameSite: "lax",
+      // Don't set domain - let browser use current domain (works for Railway)
+      // Don't set path - use default "/"
     },
   })
 );

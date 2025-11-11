@@ -135,6 +135,14 @@ router.post(
 
       // Create session
       const sessionToken = await createUserSession(user.id, req);
+      
+      // Log session creation for debugging
+      console.log(`[Auth] Session created for user ${user.id}, token: ${sessionToken.substring(0, 8)}...`);
+      console.log(`[Auth] Session cookie will be set: ${config.session.cookieName}`);
+      console.log(`[Auth] Session saved in req.session:`, {
+        userId: req.session.userId,
+        token: req.session.token ? `${req.session.token.substring(0, 8)}...` : 'missing'
+      });
 
       res.json({
         success: true,
@@ -213,8 +221,16 @@ router.post(
  */
 router.get("/status", async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Debug logging
+    console.log(`[Auth Status] Checking auth status...`);
+    console.log(`[Auth Status] Session ID: ${req.sessionID}`);
+    console.log(`[Auth Status] Session token: ${req.session.token ? `${req.session.token.substring(0, 8)}...` : 'missing'}`);
+    console.log(`[Auth Status] Session userId: ${req.session.userId || 'missing'}`);
+    console.log(`[Auth Status] Cookies received:`, req.headers.cookie ? 'yes' : 'no');
+    
     const token = req.session.token;
     if (!token) {
+      console.log(`[Auth Status] No session token found`);
       return res.json({
         authenticated: false,
         message: "Not authenticated",
@@ -223,7 +239,17 @@ router.get("/status", async (req: Request, res: Response, next: NextFunction) =>
 
     // Check our session
     const session = await storage.getSession(token);
-    if (!session || new Date() > session.expiresAt) {
+    if (!session) {
+      console.log(`[Auth Status] Session not found in storage for token: ${token.substring(0, 8)}...`);
+      return res.json({
+        authenticated: false,
+        message: "Session not found",
+      });
+    }
+    
+    if (new Date() > session.expiresAt) {
+      console.log(`[Auth Status] Session expired`);
+      await storage.deleteSession(token);
       return res.json({
         authenticated: false,
         message: "Session expired",
@@ -233,12 +259,14 @@ router.get("/status", async (req: Request, res: Response, next: NextFunction) =>
     // Get user from Supabase database
     const user = await storage.getUser(session.userId);
     if (!user) {
+      console.log(`[Auth Status] User not found: ${session.userId}`);
       return res.json({
         authenticated: false,
         message: "User not found",
       });
     }
 
+    console.log(`[Auth Status] User authenticated: ${user.id}`);
     res.json({
       authenticated: true,
       user: {
