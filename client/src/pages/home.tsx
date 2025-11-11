@@ -10,13 +10,26 @@ import { useQueries } from '@tanstack/react-query';
 import { useAuthStatus } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ChatbotWidget } from '@/components/ChatbotWidget';
+import { useLocation as useGeolocation } from '@/hooks/useLocation';
 
 export default function HomePage() {
   const [guidedMode, setGuidedMode] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [autoStartVoice, setAutoStartVoice] = useState(false);
   const [, setLocation] = useLocation();
   const { data: authStatus } = useAuthStatus();
   const isAuthenticated = authStatus?.authenticated === true;
+
+  // Request location for clinics when page loads
+  const { requestLocation, location: userLocation } = useGeolocation();
+  
+  useEffect(() => {
+    // Request location when authenticated user visits home page
+    if (isAuthenticated && !userLocation) {
+      console.log('[Home] Requesting user location for nearby clinics');
+      requestLocation();
+    }
+  }, [isAuthenticated, userLocation, requestLocation]);
 
   // Fetch real documents data (limit to 3 most recent)
   const { data: documentsData, isLoading: documentsLoading } = useDocuments({});
@@ -109,7 +122,17 @@ export default function HomePage() {
 
   const handleMicClick = () => {
     console.log('🎤 Voice assistant activated');
+    // Open chatbot and auto-start voice input
+    setAutoStartVoice(true);
+    setIsChatbotOpen(true);
   };
+
+  // Reset auto-start voice when chatbot closes
+  useEffect(() => {
+    if (!isChatbotOpen) {
+      setAutoStartVoice(false);
+    }
+  }, [isChatbotOpen]);
 
   const handleNotificationsClick = () => {
     console.log('🔔 Notifications opened');
@@ -221,7 +244,7 @@ export default function HomePage() {
         onBottomNavClick={handleBottomNavClick}
         onChatbotClick={handleChatbotClick}
       />
-      <ChatbotWidget isOpen={isChatbotOpen} onOpenChange={setIsChatbotOpen} />
+      <ChatbotWidget isOpen={isChatbotOpen} onOpenChange={setIsChatbotOpen} autoStartVoice={autoStartVoice} />
     </>
   );
 }
