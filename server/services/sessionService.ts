@@ -43,18 +43,31 @@ export async function createUserSession(
   // Set session in express-session
   req.session.userId = userId;
   req.session.token = token;
-  console.log(`[SessionService] Session data set in req.session`);
+  // Mark session as modified so it gets saved
+  req.session.touch();
+  console.log(`[SessionService] Session data set in req.session:`, {
+    userId: req.session.userId,
+    token: req.session.token ? `${req.session.token.substring(0, 8)}...` : 'missing',
+    sessionId: req.sessionID,
+  });
 
   // Explicitly save the session to ensure it's persisted
   return new Promise((resolve, reject) => {
-    console.log(`[SessionService] Saving express-session...`);
+    console.log(`[SessionService] Saving express-session (async)...`);
     req.session.save((err) => {
       if (err) {
         console.error(`[SessionService] ❌ Express session save error:`, err);
+        console.error(`[SessionService] Error details:`, err.message, err.stack);
         reject(err);
       } else {
         console.log(`[SessionService] ✅ Express session saved successfully`);
         console.log(`[SessionService] Session ID: ${req.sessionID}`);
+        console.log(`[SessionService] Session cookie name: ${config.session.cookieName}`);
+        // Verify session data is still there
+        console.log(`[SessionService] Verified session data after save:`, {
+          hasUserId: !!req.session.userId,
+          hasToken: !!req.session.token,
+        });
         resolve(token);
       }
     });

@@ -171,13 +171,31 @@ router.post(
         cookieName: config.session.cookieName
       });
 
+      // CRITICAL: Wait for session to be fully saved before sending response
+      // This ensures the cookie is set in the response
+      await new Promise<void>((resolve) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error(`[Auth] ❌ Session save error before response:`, err);
+          } else {
+            console.log(`[Auth] ✅ Session saved before sending response`);
+          }
+          resolve();
+        });
+      });
+
       // Log response headers to verify cookie will be set
       res.on('finish', () => {
         const setCookieHeader = res.getHeader('Set-Cookie');
         console.log(`[Auth] Response finished. Set-Cookie header:`, setCookieHeader ? 'present' : 'missing');
         if (setCookieHeader) {
-          console.log(`[Auth] Cookie value:`, Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader);
+          const cookieStr = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
+          console.log(`[Auth] Cookie value (first 100 chars):`, cookieStr?.substring(0, 100));
         }
+        console.log(`[Auth] Response headers:`, {
+          'set-cookie': setCookieHeader ? 'present' : 'missing',
+          'content-type': res.getHeader('content-type'),
+        });
       });
 
       // Send response - express-session will set the cookie automatically

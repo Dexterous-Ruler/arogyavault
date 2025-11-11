@@ -17,6 +17,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Session middleware
+// Railway uses a proxy, so we need to trust the proxy for secure cookies
+// Check if we're behind a proxy (Railway sets this)
+const isProduction = process.env.NODE_ENV === "production";
+const trustProxy = process.env.TRUST_PROXY !== "false"; // Default to true in production
+
+if (trustProxy) {
+  app.set("trust proxy", 1); // Trust first proxy (Railway's load balancer)
+}
+
 app.use(
   session({
     secret: config.session.secret,
@@ -24,13 +33,19 @@ app.use(
     saveUninitialized: false,
     name: config.session.cookieName,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      // In production with Railway, secure should be true because Railway provides HTTPS
+      // We trust the proxy (set above) so Railway's load balancer can forward the request correctly
+      secure: isProduction, // true in production (HTTPS), false in development (HTTP)
       httpOnly: true,
       maxAge: config.session.maxAge,
+      // Use "lax" for same-site requests (frontend and backend on same domain)
+      // Railway serves everything from the same domain, so "lax" works
       sameSite: "lax",
       // Don't set domain - let browser use current domain (works for Railway)
       // Don't set path - use default "/"
     },
+    // Force save even if session wasn't modified
+    rolling: true,
   })
 );
 
