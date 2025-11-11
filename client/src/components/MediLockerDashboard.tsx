@@ -214,25 +214,32 @@ export const ArogyaVaultDashboard = (props: ArogyaVaultDashboardProps) => {
     <div className="flex flex-col h-screen w-full max-w-[390px] md:max-w-[448px] lg:max-w-[512px] xl:max-w-[576px] mx-auto bg-white" data-testid="dashboard-container">
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 flex items-center justify-between" data-testid="header">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14">
+          <div className="relative flex items-center justify-center" style={{ width: '2.5rem', height: '2.5rem' }}>
             {/* Animated glow effect behind heart - using CSS animation for reliability */}
             <div 
-              className="absolute inset-0 flex items-center justify-center pointer-events-none animate-heartbeat-glow"
+              className="absolute inset-0 flex items-center justify-center pointer-events-none animate-heartbeat-glow rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(239, 68, 68, 0.5) 0%, rgba(239, 68, 68, 0.3) 40%, rgba(239, 68, 68, 0.1) 70%, transparent 100%)',
-                filter: 'blur(12px)',
+                background: 'radial-gradient(circle, rgba(239, 68, 68, 0.6) 0%, rgba(239, 68, 68, 0.4) 30%, rgba(239, 68, 68, 0.2) 60%, transparent 80%)',
+                filter: 'blur(14px)',
+                width: '100%',
+                height: '100%',
               }}
             />
             {/* Heart icon with heartbeat animation - using CSS animation */}
-            <div className="relative z-10 flex items-center justify-center animate-heartbeat">
+            <div 
+              className="relative z-10 flex items-center justify-center animate-heartbeat"
+              style={{
+                transformOrigin: 'center center',
+              }}
+            >
               <Heart 
                 className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-red-500" 
                 data-testid="icon-app-logo"
-                fill="rgba(239, 68, 68, 0.9)"
-                stroke="rgba(239, 68, 68, 1)"
+                fill="#ef4444"
+                stroke="#dc2626"
+                strokeWidth={1.5}
                 style={{
-                  filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.6))',
-                  strokeWidth: 1.5,
+                  filter: 'drop-shadow(0 0 12px rgba(239, 68, 68, 0.7))',
                 }}
               />
             </div>
