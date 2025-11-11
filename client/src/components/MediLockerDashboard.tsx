@@ -406,10 +406,20 @@ export const ArogyaVaultDashboard = (props: ArogyaVaultDashboardProps) => {
                       <FileText className="w-8 h-8 text-gray-400" />
                     </div>
                     <p className="text-xs font-medium text-gray-900 truncate w-20" data-testid={`text-document-type-${doc.id}`}>{doc.type}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1" data-testid={`text-document-date-${doc.id}`}>
-                      <Calendar className="w-3 h-3" />
-                      {doc.date}
-                    </p>
+                    <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                      {doc.date && (
+                        <p className="flex items-center gap-1" data-testid={`text-document-report-date-${doc.id}`}>
+                          <Calendar className="w-3 h-3" />
+                          <span className="truncate">{doc.date}</span>
+                        </p>
+                      )}
+                      {doc.uploadDate && (
+                        <p className={`flex items-center gap-1 ${doc.date ? 'text-gray-400 text-[10px]' : ''}`} data-testid={`text-document-upload-date-${doc.id}`}>
+                          {!doc.date && <Calendar className="w-3 h-3" />}
+                          <span className="truncate">{doc.uploadDate}</span>
+                        </p>
+                      )}
+                    </div>
                   </motion.div>
                 ))}
               </div>
