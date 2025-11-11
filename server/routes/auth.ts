@@ -134,15 +134,31 @@ router.post(
       }
 
       // Create session
-      const sessionToken = await createUserSession(user.id, req);
+      console.log(`[Auth] Creating session for user ${user.id}...`);
+      let sessionToken: string;
+      try {
+        sessionToken = await createUserSession(user.id, req);
+        console.log(`[Auth] ✅ Session created successfully, token: ${sessionToken.substring(0, 8)}...`);
+      } catch (sessionError: any) {
+        console.error(`[Auth] ❌ Session creation failed:`, sessionError);
+        throw new Error(`Failed to create session: ${sessionError.message}`);
+      }
       
       // Log session creation for debugging
-      console.log(`[Auth] Session created for user ${user.id}, token: ${sessionToken.substring(0, 8)}...`);
-      console.log(`[Auth] Session cookie will be set: ${config.session.cookieName}`);
-      console.log(`[Auth] Session saved in req.session:`, {
+      console.log(`[Auth] Session details:`, {
         userId: req.session.userId,
-        token: req.session.token ? `${req.session.token.substring(0, 8)}...` : 'missing'
+        token: req.session.token ? `${req.session.token.substring(0, 8)}...` : 'missing',
+        sessionId: req.sessionID,
+        cookieName: config.session.cookieName
       });
+
+      // Verify session was saved in storage
+      const verifySession = await storage.getSession(sessionToken);
+      if (!verifySession) {
+        console.error(`[Auth] ❌ CRITICAL: Session not found in storage after creation!`);
+        throw new Error("Session creation failed - session not found in storage");
+      }
+      console.log(`[Auth] ✅ Session verified in storage, expires at: ${verifySession.expiresAt}`);
 
       res.json({
         success: true,
