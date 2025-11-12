@@ -25,26 +25,21 @@ export default function HomePage() {
   
   useEffect(() => {
     // Request location when authenticated user visits home page
-    if (isAuthenticated && !userLocation && !locationLoading && !locationError) {
-      console.log('[Home] Requesting user location for nearby clinics');
+    // Only request if we don't have location and we're not currently loading
+    if (isAuthenticated && !userLocation && !locationLoading) {
+      console.log('[Home] Requesting user location for nearby clinics', {
+        hasLocation: !!userLocation,
+        loading: locationLoading,
+        error: locationError,
+        isAuthenticated
+      });
       // Small delay to ensure page is fully loaded
       const timer = setTimeout(() => {
         requestLocation();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, userLocation, locationLoading, locationError, requestLocation]);
-
-  // Debug logging for clinics
-  useEffect(() => {
-    if (clinicsData) {
-      console.log('[Home] Clinics data:', clinicsData);
-      console.log('[Home] Nearby clinics count:', nearbyClinics.length);
-    }
-    if (clinicsError) {
-      console.error('[Home] Clinics error:', clinicsError);
-    }
-  }, [clinicsData, clinicsError, nearbyClinics.length]);
+  }, [isAuthenticated, userLocation, locationLoading, requestLocation]);
 
   // Fetch real documents data (limit to 3 most recent)
   const { data: documentsData, isLoading: documentsLoading } = useDocuments({});
@@ -91,18 +86,62 @@ export default function HomePage() {
       };
 
   // Fetch nearby hospitals (100km radius)
-  const { data: clinicsData, isLoading: clinicsLoading, error: clinicsError } = useNearbyClinics(100000); // 100km radius
-  const nearbyClinics = clinicsData?.success ? clinicsData.clinics
-    .filter(clinic => clinic.distance <= 100) // Only show hospitals within 100km
-    .slice(0, 10) // Show up to 10 hospitals
-    .map(clinic => ({
-      id: clinic.id,
-      name: clinic.name,
-      address: clinic.address,
-      distance: clinic.distance,
-      latitude: clinic.latitude,
-      longitude: clinic.longitude,
-    })) : [];
+  // Pass the location from home page to avoid duplicate useLocation hooks
+  const { data: clinicsData, isLoading: clinicsLoading, error: clinicsError } = useNearbyClinics(100000, userLocation); // 100km radius
+  
+  // Process clinics data
+  const nearbyClinics = clinicsData?.success && clinicsData.clinics 
+    ? clinicsData.clinics
+        .filter(clinic => clinic.distance <= 100) // Only show hospitals within 100km
+        .slice(0, 10) // Show up to 10 hospitals
+        .map(clinic => ({
+          id: clinic.id,
+          name: clinic.name,
+          address: clinic.address,
+          distance: clinic.distance,
+          latitude: clinic.latitude,
+          longitude: clinic.longitude,
+        }))
+    : [];
+  
+  // Log if we have data but no clinics after filtering
+  useEffect(() => {
+    if (clinicsData?.success && clinicsData.clinics) {
+      const filtered = clinicsData.clinics.filter(c => c.distance <= 100);
+      if (clinicsData.clinics.length > 0 && filtered.length === 0) {
+        console.warn('[Home] Clinics found but all filtered out (distance > 100km):', clinicsData.clinics.map(c => ({ name: c.name, distance: c.distance })));
+      }
+    }
+  }, [clinicsData]);
+
+  // Debug logging for clinics (moved after declarations)
+  useEffect(() => {
+    console.log('[Home] Clinics Debug:', {
+      hasLocation: !!userLocation,
+      location: userLocation,
+      locationLoading,
+      locationError,
+      clinicsData,
+      clinicsLoading,
+      clinicsError,
+      nearbyClinicsCount: nearbyClinics.length,
+      nearbyClinics
+    });
+    
+    if (clinicsData) {
+      console.log('[Home] Clinics data:', clinicsData);
+      console.log('[Home] Nearby clinics count:', nearbyClinics.length);
+      if (clinicsData.clinics && clinicsData.clinics.length > 0) {
+        console.log('[Home] First clinic:', clinicsData.clinics[0]);
+      }
+    }
+    if (clinicsError) {
+      console.error('[Home] Clinics error:', clinicsError);
+    }
+    if (locationError) {
+      console.error('[Home] Location error:', locationError);
+    }
+  }, [userLocation, locationLoading, locationError, clinicsData, clinicsLoading, clinicsError, nearbyClinics]);
 
   // Get recent documents (limit to 3)
   const recentDocIds = documentsData?.documents?.slice(0, 3).map(doc => doc.id) || [];

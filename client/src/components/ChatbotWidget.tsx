@@ -77,12 +77,13 @@ export function ChatbotWidget({ isOpen: externalIsOpen, onOpenChange: externalOn
     isSupported: isVoiceSupported,
   } = useVoiceRecognition(handleVoiceResult, handleVoiceError, language === 'hi' ? 'hi-IN' : 'en-US');
 
-  // Text-to-speech for responses
+  // Text-to-speech for responses with feminine voice
+  // Uses improved defaults: rate 0.95 (clearer), pitch 1.1 (feminine), automatically selects best feminine voice
   const { isSpeaking, speak, stop: stopSpeaking, isSupported: isTTSSupported } = useTextToSpeech(
     language === 'hi' ? 'hi-IN' : 'en-US',
-    1.0, // rate
-    1.0, // pitch
-    1.0  // volume
+    0.95, // Slightly slower for clearer, more natural speech
+    1.1,  // Slightly higher pitch for feminine sound
+    1.0   // Full volume
   );
 
   // Use external control if provided, otherwise use internal state

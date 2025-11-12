@@ -3,11 +3,15 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { getNearbyClinics, type Clinic } from "@/lib/api/clinics";
-import { useLocation } from "@/hooks/useLocation";
+import { useLocation, type Location } from "@/hooks/useLocation";
 import { useEffect } from "react";
 
-export function useNearbyClinics(radius: number = 5000) {
-  const { location, loading: locationLoading, error: locationError } = useLocation();
+export function useNearbyClinics(radius: number = 5000, providedLocation?: Location | null) {
+  // Use provided location if available, otherwise use hook
+  const locationHook = useLocation();
+  const location = providedLocation !== undefined ? providedLocation : locationHook.location;
+  const locationLoading = providedLocation !== undefined ? false : locationHook.loading;
+  const locationError = providedLocation !== undefined ? null : locationHook.error;
 
   const query = useQuery({
     queryKey: ["nearby-clinics", location?.latitude, location?.longitude, radius],
@@ -22,8 +26,23 @@ export function useNearbyClinics(radius: number = 5000) {
     },
     enabled: !!location && !locationLoading,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false,
+    retry: 1, // Allow 1 retry
+    refetchOnWindowFocus: false,
   });
+  
+  // Debug: Log query state
+  useEffect(() => {
+    console.log(`[useClinics] Query state:`, {
+      enabled: !!location && !locationLoading,
+      hasLocation: !!location,
+      locationLoading,
+      isLoading: query.isLoading,
+      isFetching: query.isFetching,
+      data: query.data,
+      error: query.error,
+      status: query.status,
+    });
+  }, [location, locationLoading, query.isLoading, query.isFetching, query.data, query.error, query.status]);
 
   // Debug logging
   useEffect(() => {

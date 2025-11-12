@@ -137,43 +137,36 @@ router.get("/nearby", async (req: Request, res: Response, next: NextFunction) =>
     try {
       console.log(`[Clinics] Using OpenStreetMap to find hospitals near ${lat},${lng}`);
       
-      // OpenStreetMap Nominatim API - search for hospitals and clinics near location
-      // Try multiple search queries for better results
+      // OpenStreetMap Nominatim API - use the working query format
       const searchRadiusKm = Math.min(radius / 1000, 50); // Max 50km for OSM
-      const queries = [
-        `hospital+near+${lat},${lng}`,
-        `clinic+near+${lat},${lng}`,
-        `medical+center+near+${lat},${lng}`,
-        `health+center+near+${lat},${lng}`,
-      ];
+      
+      // Use the original working query format: search for hospital near coordinates
+      const query = `hospital near ${lat},${lng}`;
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=20&addressdetails=1&extratags=1`;
+      
+      console.log(`[Clinics] Fetching OSM data: ${query}`);
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          'User-Agent': 'ArogyaVault/1.0', // Required by Nominatim
+          'Accept-Language': 'en',
+        },
+      });
       
       let allPlaces: any[] = [];
       
-      // Try each query and combine results
-      for (const query of queries) {
-        try {
-          const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=20&addressdetails=1&extratags=1&bounded=1&viewbox=${lng - 0.5},${lat + 0.5},${lng + 0.5},${lat - 0.5}`;
-          
-          const response = await fetch(nominatimUrl, {
-            headers: {
-              'User-Agent': 'ArogyaVault/1.0', // Required by Nominatim
-              'Accept-Language': 'en',
-            },
-          });
-          
-          if (response.ok) {
-            const places = await response.json();
-            if (Array.isArray(places)) {
-              allPlaces = [...allPlaces, ...places];
-            }
-          }
-          
-          // Small delay to respect rate limits
-          await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (error) {
-          console.warn(`[Clinics] Error fetching OSM data for query "${query}":`, error);
+      if (response.ok) {
+        const places = await response.json();
+        if (Array.isArray(places)) {
+          console.log(`[Clinics] OpenStreetMap returned ${places.length} places`);
+          allPlaces = places;
+        } else {
+          console.warn(`[Clinics] OpenStreetMap returned non-array response:`, typeof places);
         }
+      } else {
+        console.warn(`[Clinics] OpenStreetMap request failed with status ${response.status}: ${response.statusText}`);
       }
+      
+      console.log(`[Clinics] Total places collected: ${allPlaces.length}`);
       
       // Remove duplicates based on OSM ID or coordinates
       const uniquePlaces = allPlaces.filter((place, index, self) =>
@@ -184,41 +177,61 @@ router.get("/nearby", async (req: Request, res: Response, next: NextFunction) =>
         )
       );
       
+      console.log(`[Clinics] After deduplication: ${uniquePlaces.length} unique places`);
+      
       if (uniquePlaces.length > 0) {
+        console.log(`[Clinics] Filtering ${uniquePlaces.length} places for medical facilities...`);
         const hospitals = uniquePlaces
           .filter((place: any) => {
-            // Filter to hospitals/clinics - more lenient filtering
+            // Filter to hospitals/clinics - very lenient filtering
             const type = (place.type || '').toLowerCase();
             const category = (place.category || '').toLowerCase();
             const classType = (place.class || '').toLowerCase();
             const displayName = (place.display_name || '').toLowerCase();
             const name = (place.name || '').toLowerCase();
             
-            // Exclude non-medical places
+            // Exclude non-medical places (strict exclusions only)
             if (classType === 'highway' || 
                 classType === 'transport' ||
                 classType === 'public_transport' ||
                 classType === 'railway' ||
                 type === 'bus_stop' || 
                 type === 'bus_station' ||
-                type === 'subway_station') {
+                type === 'subway_station' ||
+                type === 'restaurant' ||
+                type === 'cafe' ||
+                type === 'shop') {
               return false;
             }
             
-            // Accept if it's a hospital/clinic/medical facility
+            // Very lenient acceptance - accept if it mentions medical terms anywhere
             const isMedicalFacility = 
-              (classType === 'amenity' && (type === 'hospital' || type === 'clinic' || type === 'doctors' || type === 'pharmacy')) ||
+              (classType === 'amenity' && (type === 'hospital' || type === 'clinic' || type === 'doctors' || type === 'pharmacy' || type === 'dentist')) ||
               place.extratags?.amenity === 'hospital' ||
               place.extratags?.amenity === 'clinic' ||
               place.extratags?.amenity === 'doctors' ||
+              place.extratags?.amenity === 'pharmacy' ||
+              place.extratags?.amenity === 'dentist' ||
               place.extratags?.healthcare ||
               displayName.includes('hospital') || 
               displayName.includes('clinic') ||
               displayName.includes('medical') ||
               displayName.includes('health') ||
+              displayName.includes('doctor') ||
+              displayName.includes('pharmacy') ||
+              displayName.includes('lab') ||
+              displayName.includes('laboratory') ||
               name.includes('hospital') ||
               name.includes('clinic') ||
-              name.includes('medical');
+              name.includes('medical') ||
+              name.includes('health') ||
+              name.includes('doctor') ||
+              name.includes('pharmacy') ||
+              name.includes('lab');
+            
+            if (isMedicalFacility) {
+              console.log(`[Clinics] Accepted medical facility: ${name || displayName.split(',')[0]}`);
+            }
             
             return isMedicalFacility;
           })
@@ -272,12 +285,19 @@ router.get("/nearby", async (req: Request, res: Response, next: NextFunction) =>
 
         if (hospitals.length > 0) {
           console.log(`[Clinics] Found ${hospitals.length} hospitals/clinics using OpenStreetMap`);
+          console.log(`[Clinics] Sample hospital:`, hospitals[0]);
           return res.json({
             success: true,
             clinics: hospitals,
           });
         } else {
-          console.log(`[Clinics] OpenStreetMap returned ${uniquePlaces.length} places but none matched medical facility criteria`);
+          console.log(`[Clinics] OpenStreetMap returned ${uniquePlaces.length} places but none matched medical facility criteria after filtering`);
+          console.log(`[Clinics] Sample places from OSM (first 3):`, uniquePlaces.slice(0, 3).map(p => ({
+            name: p.name,
+            type: p.type,
+            class: p.class,
+            display_name: p.display_name?.substring(0, 100)
+          })));
         }
       } else {
         console.log(`[Clinics] OpenStreetMap returned no results for location ${lat},${lng}`);

@@ -589,15 +589,33 @@ export const ArogyaVaultDashboard = (props: ArogyaVaultDashboardProps) => {
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                 <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 mb-2">No clinics found nearby</p>
+                <p className="text-sm text-gray-500 mb-2">
+                  {isLoadingClinics 
+                    ? "Searching for nearby clinics..." 
+                    : "No clinics found nearby"}
+                </p>
+                <p className="text-xs text-gray-400 mb-3">
+                  {isLoadingClinics 
+                    ? "Please wait while we search..." 
+                    : clinicsError 
+                      ? `Error: ${clinicsError}. Please check browser console for details.`
+                      : "Try enabling location access or check if there are clinics in your area"}
+                </p>
                 {onRequestLocation && (
                   <button
-                    onClick={onRequestLocation}
+                    onClick={() => {
+                      console.log('[Dashboard] Manual location request clicked');
+                      console.log('[Dashboard] Current state:', { isLoadingClinics, clinicsError });
+                      onRequestLocation();
+                    }}
                     className="text-xs px-3 py-1.5 text-blue-600 hover:text-blue-700 underline"
                   >
-                    Try refreshing location
+                    {isLoadingClinics ? "Searching..." : "Try refreshing location"}
                   </button>
                 )}
+                <p className="text-xs text-gray-400 mt-2">
+                  💡 Open browser console (F12) to see detailed logs
+                </p>
               </div>
             )}
           </motion.div>
