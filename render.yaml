@@ -7,7 +7,7 @@ services:
     region: singapore
     plan: free
     branch: main
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
